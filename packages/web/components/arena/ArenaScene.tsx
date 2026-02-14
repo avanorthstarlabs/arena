@@ -18,6 +18,7 @@ interface ArenaConfig {
   name: string;
   bgImage: string;
   floorImage: string;
+  crowdImage: string;
   accentColor: string;
   accentGlow: string;
   bgTint: string;
@@ -31,6 +32,7 @@ const ARENAS: Record<string, ArenaConfig> = {
     name: "Shadow Colosseum",
     bgImage: "/sprites/arena-bg.png",
     floorImage: "/sprites/arena-floor.png",
+    crowdImage: "/sprites/crowd-gothic.png",
     accentColor: "#39ff14",
     accentGlow: "rgba(57,255,20,0.3)",
     bgTint: "#080810",
@@ -40,6 +42,7 @@ const ARENAS: Record<string, ArenaConfig> = {
     name: "Inferno Forge",
     bgImage: "/sprites/arena-volcanic-bg.png",
     floorImage: "/sprites/arena-volcanic-floor.png",
+    crowdImage: "/sprites/crowd-volcanic.png",
     accentColor: "#ff6600",
     accentGlow: "rgba(255,102,0,0.3)",
     bgTint: "#100808",
@@ -49,6 +52,7 @@ const ARENAS: Record<string, ArenaConfig> = {
     name: "Frozen Depths",
     bgImage: "/sprites/arena-ice-bg.png",
     floorImage: "/sprites/arena-ice-floor.png",
+    crowdImage: "/sprites/crowd-ice.png",
     accentColor: "#44bbff",
     accentGlow: "rgba(68,187,255,0.3)",
     bgTint: "#080810",
@@ -58,6 +62,7 @@ const ARENAS: Record<string, ArenaConfig> = {
     name: "Neon District",
     bgImage: "/sprites/arena-neon-bg.png",
     floorImage: "/sprites/arena-neon-floor.png",
+    crowdImage: "/sprites/crowd-neon.png",
     accentColor: "#ff00ff",
     accentGlow: "rgba(255,0,255,0.3)",
     bgTint: "#0a0812",
@@ -126,47 +131,63 @@ function getTargetPosition(
   basePos: FighterPos,
   opponentPos: FighterPos,
 ): FighterPos {
-  const dir = side === "left" ? 1 : -1;
-  // Face toward opponent on X
+  // Calculate midpoint between fighters for attack proximity
+  const midX = (basePos.x + opponentPos.x) / 2;
+  const midY = (basePos.y + opponentPos.y) / 2;
   const towardOpponent = opponentPos.x > basePos.x ? 1 : -1;
+
+  // Combat range — how close fighters get during attacks (gap between them)
+  const STRIKE_GAP = 0.12; // tight enough to look like striking distance
 
   switch (animState) {
     case "attack":
-      // Lunge toward opponent + slight depth shift
+      // Lunge to striking distance of opponent — close the gap significantly
       return clampToArena({
-        x: basePos.x + 0.18 * towardOpponent,
-        y: basePos.y - 0.04,
+        x: opponentPos.x - STRIKE_GAP * towardOpponent,
+        y: midY - 0.02,
         z: 0,
       });
     case "dodge":
-      // Evade laterally away from opponent + retreat into depth
+      // Evade away from opponent — big retreat
       return clampToArena({
-        x: basePos.x - 0.14 * towardOpponent,
-        y: basePos.y + 0.12,
+        x: basePos.x - 0.22 * towardOpponent,
+        y: basePos.y + 0.08,
         z: 0,
       });
     case "hurt":
-      // Knocked back away from opponent
+      // Knocked back from where they are (not base — reacts from current)
       return clampToArena({
-        x: basePos.x - 0.1 * towardOpponent,
-        y: basePos.y + 0.03,
+        x: basePos.x - 0.16 * towardOpponent,
+        y: basePos.y + 0.04,
         z: 0,
       });
     case "ko":
       return clampToArena({
-        x: basePos.x - 0.12 * towardOpponent,
+        x: basePos.x - 0.2 * towardOpponent,
         y: basePos.y + 0.06,
         z: 0,
       });
     case "block":
-      // Brace — slight crouch forward
+      // Brace — hold ground but lean slightly forward
       return clampToArena({
-        x: basePos.x + 0.03 * towardOpponent,
+        x: basePos.x + 0.06 * towardOpponent,
         y: basePos.y - 0.02,
         z: 0,
       });
     default:
       return clampToArena({ ...basePos, z: 0 });
+  }
+}
+
+// Lerp speed varies by action — attacks close fast, idle drifts slowly
+function getLerpSpeed(animState: AnimState): number {
+  switch (animState) {
+    case "attack": return 0.14; // fast lunge
+    case "hurt": return 0.12;   // quick knockback
+    case "dodge": return 0.1;   // swift dodge
+    case "ko": return 0.06;
+    case "block": return 0.1;
+    default: return 0.04;       // gentle idle drift
   }
 }
 
@@ -604,6 +625,62 @@ function ArenaGround({ arena }: { arena: ArenaConfig }) {
   );
 }
 
+// ── Crowd Layer with Depth of Field ─────────────────────────────
+
+function CrowdLayer({ arena }: { arena: ArenaConfig }) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        bottom: "32%",
+        left: 0,
+        right: 0,
+        height: "24%",
+        zIndex: 0,
+        pointerEvents: "none",
+        overflow: "hidden",
+      }}
+    >
+      {/* Single crowd image — crisp pixel art, no heavy blur */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: "-2%",
+          right: "-2%",
+          height: "100%",
+          backgroundImage: `url(${arena.crowdImage})`,
+          backgroundSize: "auto 100%",
+          backgroundRepeat: "repeat-x",
+          backgroundPosition: "center bottom",
+          imageRendering: "pixelated",
+          filter: "brightness(0.7)",
+          opacity: 0.9,
+        }}
+      />
+      {/* Gradient fade into arena background at top */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: "35%",
+          background: `linear-gradient(to bottom, ${arena.bgTint}, transparent)`,
+        }}
+      />
+      {/* Side fades */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: `linear-gradient(to right, ${arena.bgTint} 0%, transparent 8%, transparent 92%, ${arena.bgTint} 100%)`,
+        }}
+      />
+    </div>
+  );
+}
+
 // ── Ambient Arena Particles ─────────────────────────────────────
 
 // Deterministic pseudo-random to avoid SSR/client hydration mismatch
@@ -752,8 +829,26 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
       ? gameState.history[gameState.history.length - 1]
       : null;
 
-  const p1Anim = getAnimState(lastEntry?.p1Action, isP1Hurt, isP1KO);
-  const p2Anim = getAnimState(lastEntry?.p2Action, isP2Hurt, isP2KO);
+  // Two-phase animation: show attack lunge FIRST, then hurt reaction
+  const [animPhase, setAnimPhase] = useState<"action" | "reaction">("action");
+  const phaseExchangeRef = useRef(0);
+
+  useEffect(() => {
+    if (!gameState || gameState.exchange === phaseExchangeRef.current) return;
+    phaseExchangeRef.current = gameState.exchange;
+
+    // Phase 1: show the action (attack lunge) for 600ms
+    setAnimPhase("action");
+    const t = setTimeout(() => setAnimPhase("reaction"), 600);
+    return () => clearTimeout(t);
+  }, [gameState?.exchange]);
+
+  // During "action" phase, suppress hurt so attacks animate first
+  const showP1Hurt = animPhase === "reaction" && isP1Hurt;
+  const showP2Hurt = animPhase === "reaction" && isP2Hurt;
+
+  const p1Anim = getAnimState(lastEntry?.p1Action, showP1Hurt, isP1KO);
+  const p2Anim = getAnimState(lastEntry?.p2Action, showP2Hurt, isP2KO);
 
   const p1Char = getCharacterId(gameState?.p1.agentId, true);
   const p2Char = getCharacterId(gameState?.p2.agentId, false);
@@ -785,10 +880,10 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
     if (gameState.exchange <= exchangeCount.current) return;
     exchangeCount.current = gameState.exchange;
 
-    // Drift bases slightly — creates the feeling of fighters circling
+    // Subtle base drift — small shifts create natural circling feeling
     const drift = () => {
-      const dx = (Math.random() - 0.5) * 0.15;
-      const dy = (Math.random() - 0.5) * 0.1;
+      const dx = (Math.random() - 0.5) * 0.08;
+      const dy = (Math.random() - 0.5) * 0.05;
       return { dx, dy };
     };
 
@@ -805,15 +900,17 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
       z: 0,
     });
 
-    // Prevent fighters from overlapping too much
-    if (Math.abs(p1Base.current.x - p2Base.current.x) < 0.25) {
+    // Keep fighters at a minimum resting separation (wider than strike gap)
+    const MIN_REST_GAP = 0.35;
+    if (Math.abs(p1Base.current.x - p2Base.current.x) < MIN_REST_GAP) {
+      const center = (p1Base.current.x + p2Base.current.x) / 2;
       p1Base.current.x = clampToArena({
-        x: p1Base.current.x - 0.15,
+        x: center - MIN_REST_GAP / 2,
         y: 0,
         z: 0,
       }).x;
       p2Base.current.x = clampToArena({
-        x: p2Base.current.x + 0.15,
+        x: center + MIN_REST_GAP / 2,
         y: 0,
         z: 0,
       }).x;
@@ -839,6 +936,8 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
 
       const target1 = getTargetPosition(p1Anim, "left", p1Base.current, p2Pos);
       const target2 = getTargetPosition(p2Anim, "right", p2Base.current, p1Pos);
+      const speed1 = getLerpSpeed(p1Anim);
+      const speed2 = getLerpSpeed(p2Anim);
 
       setP1Pos((prev) => {
         // Jump physics
@@ -856,8 +955,8 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
         p1WasAirborne.current = z > 0.5;
 
         return clampToArena({
-          x: lerp(prev.x, target1.x, 0.08),
-          y: lerp(prev.y, target1.y, 0.08),
+          x: lerp(prev.x, target1.x, speed1),
+          y: lerp(prev.y, target1.y, speed1),
           z,
         });
       });
@@ -876,8 +975,8 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
         p2WasAirborne.current = z > 0.5;
 
         return clampToArena({
-          x: lerp(prev.x, target2.x, 0.08),
-          y: lerp(prev.y, target2.y, 0.08),
+          x: lerp(prev.x, target2.x, speed2),
+          y: lerp(prev.y, target2.y, speed2),
           z,
         });
       });
@@ -962,7 +1061,7 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
         background: arena.bgTint,
       }}
     >
-      {/* Arena background panorama */}
+      {/* Arena background panorama — depth-of-field blur for distant bg */}
       <div
         style={{
           position: "absolute",
@@ -977,6 +1076,7 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
           backgroundPosition: "center bottom",
           backgroundRepeat: "no-repeat",
           imageRendering: "pixelated",
+          filter: "blur(1.2px)",
         }}
       />
 
@@ -992,6 +1092,9 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
           zIndex: 1,
         }}
       />
+
+      {/* Crowd layer — behind fighters, with depth blur */}
+      <CrowdLayer arena={arena} />
 
       {/* Ambient particles */}
       <AmbientParticles arena={arena} />
