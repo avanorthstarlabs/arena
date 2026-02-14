@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FightHUD } from "./FightHUD";
 import type { FightState } from "./useGameState";
 
@@ -97,8 +97,6 @@ function getAnimState(
 }
 
 // ── 2.5D Position System ────────────────────────────────────────
-// x: -1 (far left) to 1 (far right) on the arena floor
-// y: 0 (front/close) to 1 (back/far) — affects scale + screen-y
 
 interface FighterPos {
   x: number;
@@ -129,6 +127,124 @@ function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
+// ── Hit Spark Particles ─────────────────────────────────────────
+
+function HitSparks({
+  pos,
+  arena,
+  intensity,
+}: {
+  pos: FighterPos;
+  arena: ArenaConfig;
+  intensity: "light" | "heavy";
+}) {
+  const count = intensity === "heavy" ? 8 : 5;
+  const screenX = 50 + pos.x * 30;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: "45%",
+        left: `${screenX}%`,
+        transform: "translateX(-50%)",
+        zIndex: 40,
+        pointerEvents: "none",
+      }}
+    >
+      {Array.from({ length: count }).map((_, i) => {
+        const angle = (i / count) * 360 + Math.random() * 40 - 20;
+        const dist = 30 + Math.random() * 40;
+        const size = intensity === "heavy" ? 4 + Math.random() * 4 : 3 + Math.random() * 3;
+        const dx = Math.cos((angle * Math.PI) / 180) * dist;
+        const dy = Math.sin((angle * Math.PI) / 180) * dist;
+        const dur = 0.3 + Math.random() * 0.3;
+
+        return (
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              width: size,
+              height: size,
+              background: i % 3 === 0 ? "#fff" : arena.accentColor,
+              boxShadow: `0 0 6px ${arena.accentColor}`,
+              borderRadius: 1,
+              animation: `sparkBurst ${dur}s ease-out forwards`,
+              ["--dx" as string]: `${dx}px`,
+              ["--dy" as string]: `${dy}px`,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Round Callout Overlay ───────────────────────────────────────
+
+type CalloutType = "round" | "fight" | "ko";
+
+function CalloutOverlay({
+  type,
+  roundNum,
+  arena,
+}: {
+  type: CalloutType;
+  roundNum?: number;
+  arena: ArenaConfig;
+}) {
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(false), type === "ko" ? 2000 : 1400);
+    return () => clearTimeout(t);
+  }, [type]);
+
+  if (!visible) return null;
+
+  const text =
+    type === "round"
+      ? `ROUND ${roundNum ?? 1}`
+      : type === "fight"
+        ? "FIGHT!"
+        : "K.O.!";
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 60,
+        pointerEvents: "none",
+      }}
+    >
+      <div
+        style={{
+          fontSize: type === "ko" ? 80 : 64,
+          fontWeight: 900,
+          fontFamily: "monospace",
+          color: type === "ko" ? "#ff3333" : arena.accentColor,
+          textShadow: `
+            0 0 30px ${type === "ko" ? "#ff0000" : arena.accentColor},
+            0 0 60px ${type === "ko" ? "rgba(255,0,0,0.5)" : arena.accentGlow},
+            3px 3px 0 #000,
+            -1px -1px 0 #000
+          `,
+          letterSpacing: type === "fight" ? 12 : 8,
+          textTransform: "uppercase",
+          animation: "calloutSlam 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards",
+        }}
+      >
+        {text}
+      </div>
+    </div>
+  );
+}
+
 // ── Fighter Sprite Component ───────────────────────────────────
 
 const ANIM_FPS: Record<AnimState, number> = {
@@ -154,13 +270,11 @@ function FighterSprite({
   animState,
   flipX,
   pos,
-  arena,
 }: {
   characterId: string;
   animState: AnimState;
   flipX: boolean;
   pos: FighterPos;
-  arena: ArenaConfig;
 }) {
   const [frame, setFrame] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
@@ -186,15 +300,13 @@ function FighterSprite({
   }, [animState]);
 
   const sheetUrl = `/sprites/${characterId}-${animState}-sheet.png`;
-  const offsetX = -(frame * 160);
 
   const isShaking = animState === "hurt";
   const isKO = animState === "ko";
 
-  // 2.5D depth calculations
-  const depthScale = 1.0 - pos.y * 0.25; // further back = smaller
-  const screenX = 50 + pos.x * 30; // % from center
-  const screenY = 72 + pos.y * 12; // % from top (lower = closer to viewer)
+  const depthScale = 1.0 - pos.y * 0.25;
+  const screenX = 50 + pos.x * 30;
+  const screenY = 72 + pos.y * 12;
   const zIdx = Math.round((1 - pos.y) * 20) + 10;
   const spriteSize = Math.round(160 * depthScale);
   const sheetSize = spriteSize * 4;
@@ -215,7 +327,7 @@ function FighterSprite({
         zIndex: zIdx,
       }}
     >
-      {/* Drop shadow on floor */}
+      {/* Drop shadow */}
       <div
         style={{
           position: "absolute",
@@ -225,7 +337,7 @@ function FighterSprite({
           width: 90 * depthScale,
           height: 14 * depthScale,
           borderRadius: "50%",
-          background: `rgba(0,0,0,0.6)`,
+          background: "rgba(0,0,0,0.6)",
           filter: `blur(${5 * depthScale}px)`,
         }}
       />
@@ -250,11 +362,9 @@ function FighterSprite({
 function DamagePopup({
   damage,
   pos,
-  arena,
 }: {
   damage: number;
   pos: FighterPos;
-  arena: ArenaConfig;
 }) {
   const [visible, setVisible] = useState(true);
 
@@ -289,7 +399,7 @@ function DamagePopup({
   );
 }
 
-// ── Arena Ground (full-width perspective floor) ─────────────────
+// ── Arena Ground ────────────────────────────────────────────────
 
 function ArenaGround({ arena }: { arena: ArenaConfig }) {
   return (
@@ -305,7 +415,6 @@ function ArenaGround({ arena }: { arena: ArenaConfig }) {
         zIndex: 1,
       }}
     >
-      {/* Full ground plane with perspective */}
       <div
         style={{
           position: "absolute",
@@ -322,7 +431,7 @@ function ArenaGround({ arena }: { arena: ArenaConfig }) {
         }}
       />
 
-      {/* Arena ring glow (circular boundary on the floor) */}
+      {/* Arena ring glow */}
       <div
         style={{
           position: "absolute",
@@ -334,10 +443,7 @@ function ArenaGround({ arena }: { arena: ArenaConfig }) {
           height: "85%",
           borderRadius: "50%",
           border: `2px solid ${arena.accentGlow}`,
-          boxShadow: `
-            0 0 40px ${arena.accentGlow},
-            inset 0 0 40px rgba(0,0,0,0.3)
-          `,
+          boxShadow: `0 0 40px ${arena.accentGlow}, inset 0 0 40px rgba(0,0,0,0.3)`,
           pointerEvents: "none",
         }}
       />
@@ -357,19 +463,17 @@ function ArenaGround({ arena }: { arena: ArenaConfig }) {
         }}
       />
 
-      {/* Edge fade to darkness on sides */}
+      {/* Side fades */}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          background: `
-            linear-gradient(to right, ${arena.bgTint} 0%, transparent 15%, transparent 85%, ${arena.bgTint} 100%)
-          `,
+          background: `linear-gradient(to right, ${arena.bgTint} 0%, transparent 15%, transparent 85%, ${arena.bgTint} 100%)`,
           pointerEvents: "none",
         }}
       />
 
-      {/* Floor-to-bottom fade */}
+      {/* Bottom fade */}
       <div
         style={{
           position: "absolute",
@@ -385,6 +489,118 @@ function ArenaGround({ arena }: { arena: ArenaConfig }) {
   );
 }
 
+// ── Ambient Arena Particles ─────────────────────────────────────
+
+// Deterministic pseudo-random to avoid SSR/client hydration mismatch
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed * 9301 + 49297) * 49307;
+  return x - Math.floor(x);
+}
+
+function AmbientParticles({ arena }: { arena: ArenaConfig }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
+  if (arena.id === "volcanic") {
+    return (
+      <div style={{ position: "absolute", inset: 0, zIndex: 2, pointerEvents: "none", overflow: "hidden" }}>
+        {Array.from({ length: 12 }).map((_, i) => (
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              left: `${8 + seededRandom(i * 6 + 1) * 84}%`,
+              bottom: `${35 + seededRandom(i * 6 + 2) * 20}%`,
+              width: 2 + seededRandom(i * 6 + 3) * 3,
+              height: 2 + seededRandom(i * 6 + 4) * 3,
+              background: i % 3 === 0 ? "#ff6600" : "#ff3300",
+              borderRadius: "50%",
+              boxShadow: "0 0 4px #ff4400",
+              opacity: 0.7,
+              animation: `emberFloat ${3 + seededRandom(i * 6 + 5) * 4}s ease-in-out infinite`,
+              animationDelay: `${seededRandom(i * 6 + 6) * 5}s`,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (arena.id === "ice") {
+    return (
+      <div style={{ position: "absolute", inset: 0, zIndex: 2, pointerEvents: "none", overflow: "hidden" }}>
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              left: `${seededRandom(i * 4 + 100) * 100}%`,
+              top: `-5%`,
+              width: 2,
+              height: 2,
+              background: i % 4 === 0 ? "#88ddff" : "#ffffff",
+              borderRadius: "50%",
+              opacity: 0.4 + seededRandom(i * 4 + 101) * 0.3,
+              animation: `snowfall ${5 + seededRandom(i * 4 + 102) * 8}s linear infinite`,
+              animationDelay: `${seededRandom(i * 4 + 103) * 8}s`,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (arena.id === "neon") {
+    return (
+      <div style={{ position: "absolute", inset: 0, zIndex: 2, pointerEvents: "none", overflow: "hidden" }}>
+        {Array.from({ length: 30 }).map((_, i) => (
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              left: `${seededRandom(i * 3 + 200) * 100}%`,
+              top: `-2%`,
+              width: 1,
+              height: 8 + seededRandom(i * 3 + 201) * 16,
+              background: "rgba(150,180,255,0.15)",
+              animation: `rainDrop ${0.6 + seededRandom(i * 3 + 202) * 0.8}s linear infinite`,
+              animationDelay: `${seededRandom(i * 3 + 203) * 2}s`,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (arena.id === "gothic") {
+    return (
+      <div style={{ position: "absolute", inset: 0, zIndex: 2, pointerEvents: "none", overflow: "hidden" }}>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              left: `${10 + seededRandom(i * 4 + 300) * 80}%`,
+              top: `${15 + seededRandom(i * 4 + 301) * 35}%`,
+              width: 3,
+              height: 3,
+              background: "#39ff14",
+              borderRadius: "50%",
+              boxShadow: "0 0 8px #39ff14",
+              opacity: 0,
+              animation: `energyMote ${4 + seededRandom(i * 4 + 302) * 4}s ease-in-out infinite`,
+              animationDelay: `${seededRandom(i * 4 + 303) * 6}s`,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return null;
+}
+
 // ── Main Arena Scene ───────────────────────────────────────────
 
 const CHARACTER_MAP: Record<string, string> = {
@@ -397,8 +613,6 @@ function getCharacterId(agentId: string | undefined, isP1: boolean): string {
 }
 
 export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
-  // Pick arena once on mount (random if not specified)
-  // Use state instead of useMemo to avoid hydration mismatch from Math.random()
   const [arena, setArena] = useState<ArenaConfig>(ARENAS.gothic);
   const arenaInitRef = useRef(false);
 
@@ -437,7 +651,6 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
   const [p2Pos, setP2Pos] = useState<FighterPos>(BASE_P2);
   const animFrameRef = useRef<number>();
 
-  // Smooth position interpolation toward targets
   useEffect(() => {
     const target1 = getTargetPosition(p1Anim, "left", BASE_P1);
     const target2 = getTargetPosition(p2Anim, "right", BASE_P2);
@@ -463,22 +676,67 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
     };
   }, [p1Anim, p2Anim]);
 
-  // Determine which fighter is to the left — flip sprites accordingly
   const p1FacingRight = p1Pos.x < p2Pos.x;
 
-  // Track damage for popups
+  // ── Camera Shake + Zoom Pulse ───────────────────────────
+  const [shakeClass, setShakeClass] = useState("");
+  const sceneRef = useRef<HTMLDivElement>(null);
+
+  // ── Damage tracking ─────────────────────────────────────
   const [damageKey, setDamageKey] = useState(0);
   const prevExchange = useRef(0);
 
+  // ── Callout system ──────────────────────────────────────
+  const [callout, setCallout] = useState<{ type: CalloutType; round?: number; key: number } | null>(null);
+  const calloutKeyRef = useRef(0);
+  const prevRoundRef = useRef(0);
+
+  // Trigger effects on exchange
   useEffect(() => {
-    if (gameState && gameState.exchange !== prevExchange.current) {
-      prevExchange.current = gameState.exchange;
-      setDamageKey((k) => k + 1);
+    if (!gameState) return;
+    if (gameState.exchange === prevExchange.current) return;
+
+    const isNewExchange = gameState.exchange > prevExchange.current;
+    prevExchange.current = gameState.exchange;
+    setDamageKey((k) => k + 1);
+
+    if (!isNewExchange) return;
+
+    const totalDamage = (lastResult?.p1Damage ?? 0) + (lastResult?.p2Damage ?? 0);
+    if (totalDamage > 0) {
+      // Camera shake — intensity based on damage
+      const intensity = totalDamage > 20 ? "heavy" : "light";
+      setShakeClass(intensity === "heavy" ? "shake-heavy" : "shake-light");
+      setTimeout(() => setShakeClass(""), 350);
+    }
+
+    // KO callout
+    if (isP1KO || isP2KO) {
+      calloutKeyRef.current += 1;
+      setCallout({ type: "ko", key: calloutKeyRef.current });
     }
   }, [gameState?.exchange]);
 
+  // Round start callout
+  useEffect(() => {
+    if (!gameState) return;
+    const currentRound = gameState.p1.roundWins + gameState.p2.roundWins + 1;
+    if (currentRound !== prevRoundRef.current && gameState.exchange === 0) {
+      prevRoundRef.current = currentRound;
+      calloutKeyRef.current += 1;
+      setCallout({ type: "round", round: currentRound, key: calloutKeyRef.current });
+      // Follow up with FIGHT! after a delay
+      setTimeout(() => {
+        calloutKeyRef.current += 1;
+        setCallout({ type: "fight", key: calloutKeyRef.current });
+      }, 1200);
+    }
+  }, [gameState?.p1.roundWins, gameState?.p2.roundWins, gameState?.exchange]);
+
   return (
     <div
+      ref={sceneRef}
+      className={shakeClass}
       style={{
         width: "100%",
         height: "100vh",
@@ -518,6 +776,9 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
         }}
       />
 
+      {/* Ambient particles */}
+      <AmbientParticles arena={arena} />
+
       {/* Full-width arena ground */}
       <ArenaGround arena={arena} />
 
@@ -527,15 +788,31 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
         animState={p1Anim}
         flipX={!p1FacingRight}
         pos={p1Pos}
-        arena={arena}
       />
       <FighterSprite
         characterId={p2Char}
         animState={p2Anim}
         flipX={p1FacingRight}
         pos={p2Pos}
-        arena={arena}
       />
+
+      {/* Hit Sparks */}
+      {lastResult && lastResult.p2Damage > 0 && (
+        <HitSparks
+          key={`spark-p2-${damageKey}`}
+          pos={p2Pos}
+          arena={arena}
+          intensity={lastResult.p2Damage > 15 ? "heavy" : "light"}
+        />
+      )}
+      {lastResult && lastResult.p1Damage > 0 && (
+        <HitSparks
+          key={`spark-p1-${damageKey}`}
+          pos={p1Pos}
+          arena={arena}
+          intensity={lastResult.p1Damage > 15 ? "heavy" : "light"}
+        />
+      )}
 
       {/* Damage popups */}
       {lastResult && lastResult.p2Damage > 0 && (
@@ -543,7 +820,6 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
           key={`p2-${damageKey}`}
           damage={lastResult.p2Damage}
           pos={p2Pos}
-          arena={arena}
         />
       )}
       {lastResult && lastResult.p1Damage > 0 && (
@@ -551,6 +827,15 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
           key={`p1-${damageKey}`}
           damage={lastResult.p1Damage}
           pos={p1Pos}
+        />
+      )}
+
+      {/* Round / Fight / KO Callout */}
+      {callout && (
+        <CalloutOverlay
+          key={callout.key}
+          type={callout.type}
+          roundNum={callout.round}
           arena={arena}
         />
       )}
@@ -578,9 +863,102 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
 
       {/* CSS Animations */}
       <style>{`
+        /* ── Camera Shake ─────────────────────────── */
+        .shake-light {
+          animation: cameraShakeLight 0.3s ease-out;
+        }
+        .shake-heavy {
+          animation: cameraShakeHeavy 0.35s ease-out;
+        }
+
+        @keyframes cameraShakeLight {
+          0% { transform: translate(0, 0) scale(1); }
+          15% { transform: translate(-2px, 1px) scale(1.008); }
+          30% { transform: translate(2px, -1px) scale(1.012); }
+          45% { transform: translate(-1px, 0px) scale(1.006); }
+          60% { transform: translate(1px, 1px) scale(1.002); }
+          100% { transform: translate(0, 0) scale(1); }
+        }
+
+        @keyframes cameraShakeHeavy {
+          0% { transform: translate(0, 0) scale(1); }
+          10% { transform: translate(-3px, 2px) scale(1.015); }
+          25% { transform: translate(3px, -2px) scale(1.025); }
+          40% { transform: translate(-2px, 1px) scale(1.018); }
+          55% { transform: translate(2px, -1px) scale(1.008); }
+          70% { transform: translate(-1px, 0) scale(1.003); }
+          100% { transform: translate(0, 0) scale(1); }
+        }
+
+        /* ── Damage Float ─────────────────────────── */
         @keyframes damageFloat {
           0% { opacity: 1; transform: translateX(-50%) translateY(0); }
           100% { opacity: 0; transform: translateX(-50%) translateY(-60px); }
+        }
+
+        /* ── Hit Spark Burst ──────────────────────── */
+        @keyframes sparkBurst {
+          0% {
+            transform: translate(0, 0) scale(1);
+            opacity: 1;
+          }
+          100% {
+            transform: translate(var(--dx), var(--dy)) scale(0.3);
+            opacity: 0;
+          }
+        }
+
+        /* ── Round Callout Slam ───────────────────── */
+        @keyframes calloutSlam {
+          0% {
+            transform: scale(2.5);
+            opacity: 0;
+          }
+          25% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          70% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(1.1);
+            opacity: 0;
+          }
+        }
+
+        /* ── Ambient: Volcanic Embers ─────────────── */
+        @keyframes emberFloat {
+          0% { transform: translateY(0) translateX(0); opacity: 0; }
+          15% { opacity: 0.8; }
+          50% { transform: translateY(-40px) translateX(10px); opacity: 0.6; }
+          85% { opacity: 0.3; }
+          100% { transform: translateY(-80px) translateX(-5px); opacity: 0; }
+        }
+
+        /* ── Ambient: Snowfall ────────────────────── */
+        @keyframes snowfall {
+          0% { transform: translateY(-20px) translateX(0); opacity: 0; }
+          10% { opacity: 0.6; }
+          90% { opacity: 0.3; }
+          100% { transform: translateY(100vh) translateX(30px); opacity: 0; }
+        }
+
+        /* ── Ambient: Neon Rain ───────────────────── */
+        @keyframes rainDrop {
+          0% { transform: translateY(-20px); opacity: 0; }
+          10% { opacity: 0.3; }
+          90% { opacity: 0.15; }
+          100% { transform: translateY(100vh); opacity: 0; }
+        }
+
+        /* ── Ambient: Gothic Energy Motes ─────────── */
+        @keyframes energyMote {
+          0% { opacity: 0; transform: translateY(0) scale(0.5); }
+          30% { opacity: 0.6; transform: translateY(-10px) scale(1); }
+          60% { opacity: 0.4; transform: translateY(-25px) scale(0.8); }
+          100% { opacity: 0; transform: translateY(-40px) scale(0.3); }
         }
       `}</style>
     </div>
