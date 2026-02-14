@@ -200,12 +200,13 @@ function HitSparks({
 }) {
   const count = intensity === "heavy" ? 8 : 5;
   const screenX = 50 + pos.x * 30;
+  const bottomPct = 12 + pos.y * 16;
 
   return (
     <div
       style={{
         position: "absolute",
-        top: "45%",
+        bottom: `${bottomPct + 8}%`,
         left: `${screenX}%`,
         transform: "translateX(-50%)",
         zIndex: 40,
@@ -372,7 +373,8 @@ function FighterSprite({
 
   const depthScale = 1.0 - pos.y * 0.25;
   const screenX = 50 + pos.x * 30;
-  const screenY = 72 + pos.y * 12;
+  // bottom % — front (y=0) sits low on floor, back (y=0.55) sits higher on screen
+  const bottomPct = 12 + pos.y * 16;
   const zIdx = Math.round((1 - pos.y) * 20) + 10 + (airborne ? 5 : 0);
   const spriteSize = Math.round(160 * depthScale);
   const sheetSize = spriteSize * 4;
@@ -386,7 +388,7 @@ function FighterSprite({
     <div
       style={{
         position: "absolute",
-        bottom: `${100 - screenY}%`,
+        bottom: `${bottomPct}%`,
         left: `${screenX}%`,
         transform: `
           translateX(-50%)
@@ -488,12 +490,13 @@ function DamagePopup({
   if (!visible || damage === 0) return null;
 
   const screenX = 50 + pos.x * 30;
+  const bottomPct = 12 + pos.y * 16;
 
   return (
     <div
       style={{
         position: "absolute",
-        top: "35%",
+        bottom: `${bottomPct + 14}%`,
         left: `${screenX}%`,
         transform: "translateX(-50%)",
         color: "#ff3333",
