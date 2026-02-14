@@ -99,28 +99,88 @@ function getAnimState(
 // ── 2.5D Position System ────────────────────────────────────────
 
 interface FighterPos {
-  x: number;
-  y: number;
+  x: number; // -1 (far left) to 1 (far right)
+  y: number; // 0 (front/close) to 1 (back/far)
+  z: number; // jump height — 0 = on ground, >0 = airborne
+}
+
+// Arena bounds — fighters confined to the fightable floor area
+const ARENA_BOUNDS = {
+  xMin: -0.75,
+  xMax: 0.75,
+  yMin: 0.0,
+  yMax: 0.55,
+};
+
+function clampToArena(pos: FighterPos): FighterPos {
+  return {
+    x: Math.max(ARENA_BOUNDS.xMin, Math.min(ARENA_BOUNDS.xMax, pos.x)),
+    y: Math.max(ARENA_BOUNDS.yMin, Math.min(ARENA_BOUNDS.yMax, pos.y)),
+    z: Math.max(0, pos.z),
+  };
 }
 
 function getTargetPosition(
   animState: AnimState,
   side: "left" | "right",
   basePos: FighterPos,
+  opponentPos: FighterPos,
 ): FighterPos {
   const dir = side === "left" ? 1 : -1;
+  // Face toward opponent on X
+  const towardOpponent = opponentPos.x > basePos.x ? 1 : -1;
+
   switch (animState) {
     case "attack":
-      return { x: basePos.x + 0.12 * dir, y: basePos.y };
+      // Lunge toward opponent + slight depth shift
+      return clampToArena({
+        x: basePos.x + 0.18 * towardOpponent,
+        y: basePos.y - 0.04,
+        z: 0,
+      });
     case "dodge":
-      return { x: basePos.x - 0.1 * dir, y: basePos.y + 0.08 };
+      // Evade laterally away from opponent + retreat into depth
+      return clampToArena({
+        x: basePos.x - 0.14 * towardOpponent,
+        y: basePos.y + 0.12,
+        z: 0,
+      });
     case "hurt":
-      return { x: basePos.x - 0.06 * dir, y: basePos.y };
+      // Knocked back away from opponent
+      return clampToArena({
+        x: basePos.x - 0.1 * towardOpponent,
+        y: basePos.y + 0.03,
+        z: 0,
+      });
     case "ko":
-      return { x: basePos.x - 0.08 * dir, y: basePos.y + 0.05 };
+      return clampToArena({
+        x: basePos.x - 0.12 * towardOpponent,
+        y: basePos.y + 0.06,
+        z: 0,
+      });
+    case "block":
+      // Brace — slight crouch forward
+      return clampToArena({
+        x: basePos.x + 0.03 * towardOpponent,
+        y: basePos.y - 0.02,
+        z: 0,
+      });
     default:
-      return basePos;
+      return clampToArena({ ...basePos, z: 0 });
   }
+}
+
+// Should this action trigger a jump?
+function shouldJump(action: string | undefined): boolean {
+  if (!action) return false;
+  const a = action.toLowerCase();
+  return (
+    a.includes("uppercut") ||
+    a.includes("jump") ||
+    a.includes("aerial") ||
+    a.includes("flying") ||
+    a.includes("kick")
+  );
 }
 
 function lerp(a: number, b: number, t: number): number {
@@ -270,11 +330,15 @@ function FighterSprite({
   animState,
   flipX,
   pos,
+  arena,
+  isLanding,
 }: {
   characterId: string;
   animState: AnimState;
   flipX: boolean;
   pos: FighterPos;
+  arena: ArenaConfig;
+  isLanding: boolean;
 }) {
   const [frame, setFrame] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
@@ -303,13 +367,20 @@ function FighterSprite({
 
   const isShaking = animState === "hurt";
   const isKO = animState === "ko";
+  const isActing = animState === "attack" || animState === "dodge" || animState === "block";
+  const airborne = pos.z > 0.5;
 
   const depthScale = 1.0 - pos.y * 0.25;
   const screenX = 50 + pos.x * 30;
   const screenY = 72 + pos.y * 12;
-  const zIdx = Math.round((1 - pos.y) * 20) + 10;
+  const zIdx = Math.round((1 - pos.y) * 20) + 10 + (airborne ? 5 : 0);
   const spriteSize = Math.round(160 * depthScale);
   const sheetSize = spriteSize * 4;
+
+  // Jump visual offset — pos.z maps to pixels upward
+  const jumpOffset = pos.z * 1.8;
+  // Landing squash — briefly compress the sprite on landing
+  const squashY = isLanding ? "scaleY(0.85) scaleX(1.12)" : "";
 
   return (
     <div
@@ -319,28 +390,69 @@ function FighterSprite({
         left: `${screenX}%`,
         transform: `
           translateX(-50%)
+          translateY(${-jumpOffset}px)
           ${flipX ? "scaleX(-1)" : ""}
+          ${squashY}
           ${isShaking ? `translateX(${Math.random() > 0.5 ? 4 : -4}px)` : ""}
           ${isKO ? "rotate(15deg) translateY(20px)" : ""}
         `,
-        transition: isShaking ? "none" : "all 0.4s ease-out",
+        transition: isShaking ? "none" : "all 0.15s ease-out",
         zIndex: zIdx,
       }}
     >
-      {/* Drop shadow */}
+      {/* Ground glow pulse — shows when performing an action */}
+      {isActing && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: -12 * depthScale,
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: 100 * depthScale,
+            height: 20 * depthScale,
+            borderRadius: "50%",
+            background: `radial-gradient(ellipse, ${arena.accentColor}66 0%, ${arena.accentColor}22 40%, transparent 70%)`,
+            boxShadow: `0 0 20px ${arena.accentGlow}`,
+            animation: "glowPulse 0.5s ease-out forwards",
+            pointerEvents: "none",
+          }}
+        />
+      )}
+
+      {/* Landing ring — expands outward on impact */}
+      {isLanding && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: -6 * depthScale,
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: 80 * depthScale,
+            height: 16 * depthScale,
+            borderRadius: "50%",
+            border: `2px solid ${arena.accentColor}88`,
+            animation: "landingRing 0.4s ease-out forwards",
+            pointerEvents: "none",
+          }}
+        />
+      )}
+
+      {/* Drop shadow — grows/shrinks with jump height */}
       <div
         style={{
           position: "absolute",
           bottom: -8 * depthScale,
           left: "50%",
-          transform: "translateX(-50%)",
-          width: 90 * depthScale,
-          height: 14 * depthScale,
+          transform: `translateX(-50%) translateY(${jumpOffset * 0.3}px)`,
+          width: (90 - pos.z * 0.3) * depthScale,
+          height: (14 - pos.z * 0.06) * depthScale,
           borderRadius: "50%",
-          background: "rgba(0,0,0,0.6)",
-          filter: `blur(${5 * depthScale}px)`,
+          background: `rgba(0,0,0,${0.6 - pos.z * 0.003})`,
+          filter: `blur(${(5 + pos.z * 0.05) * depthScale}px)`,
+          transition: "all 0.1s ease-out",
         }}
       />
+
       {/* Sprite */}
       <div
         style={{
@@ -644,28 +756,129 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
   const p2Char = getCharacterId(gameState?.p2.agentId, false);
 
   // ── 2.5D Fighter Positions ──────────────────────────────
-  const BASE_P1: FighterPos = { x: -0.45, y: 0.25 };
-  const BASE_P2: FighterPos = { x: 0.45, y: 0.25 };
+  const BASE_P1: FighterPos = { x: -0.45, y: 0.25, z: 0 };
+  const BASE_P2: FighterPos = { x: 0.45, y: 0.25, z: 0 };
 
   const [p1Pos, setP1Pos] = useState<FighterPos>(BASE_P1);
   const [p2Pos, setP2Pos] = useState<FighterPos>(BASE_P2);
+  const [p1Landing, setP1Landing] = useState(false);
+  const [p2Landing, setP2Landing] = useState(false);
   const animFrameRef = useRef<number>();
 
-  useEffect(() => {
-    const target1 = getTargetPosition(p1Anim, "left", BASE_P1);
-    const target2 = getTargetPosition(p2Anim, "right", BASE_P2);
+  // Jump velocity tracking (not in state — updated in rAF loop)
+  const p1JumpVel = useRef(0);
+  const p2JumpVel = useRef(0);
+  const p1WasAirborne = useRef(false);
+  const p2WasAirborne = useRef(false);
 
+  // Base positions drift over time to create dynamic circling
+  const p1Base = useRef<FighterPos>({ ...BASE_P1 });
+  const p2Base = useRef<FighterPos>({ ...BASE_P2 });
+  const exchangeCount = useRef(0);
+
+  // Shift base positions each exchange so fighters reposition dynamically
+  useEffect(() => {
+    if (!gameState) return;
+    if (gameState.exchange <= exchangeCount.current) return;
+    exchangeCount.current = gameState.exchange;
+
+    // Drift bases slightly — creates the feeling of fighters circling
+    const drift = () => {
+      const dx = (Math.random() - 0.5) * 0.15;
+      const dy = (Math.random() - 0.5) * 0.1;
+      return { dx, dy };
+    };
+
+    const d1 = drift();
+    const d2 = drift();
+    p1Base.current = clampToArena({
+      x: p1Base.current.x + d1.dx,
+      y: p1Base.current.y + d1.dy,
+      z: 0,
+    });
+    p2Base.current = clampToArena({
+      x: p2Base.current.x + d2.dx,
+      y: p2Base.current.y + d2.dy,
+      z: 0,
+    });
+
+    // Prevent fighters from overlapping too much
+    if (Math.abs(p1Base.current.x - p2Base.current.x) < 0.25) {
+      p1Base.current.x = clampToArena({
+        x: p1Base.current.x - 0.15,
+        y: 0,
+        z: 0,
+      }).x;
+      p2Base.current.x = clampToArena({
+        x: p2Base.current.x + 0.15,
+        y: 0,
+        z: 0,
+      }).x;
+    }
+  }, [gameState?.exchange]);
+
+  // Trigger jumps on specific actions
+  useEffect(() => {
+    if (shouldJump(lastEntry?.p1Action) && p1JumpVel.current === 0 && p1Pos.z < 1) {
+      p1JumpVel.current = 4.5; // launch velocity
+    }
+    if (shouldJump(lastEntry?.p2Action) && p2JumpVel.current === 0 && p2Pos.z < 1) {
+      p2JumpVel.current = 4.5;
+    }
+  }, [lastEntry?.p1Action, lastEntry?.p2Action]);
+
+  useEffect(() => {
     let cancelled = false;
+    const GRAVITY = 0.25;
+
     const animate = () => {
       if (cancelled) return;
-      setP1Pos((prev) => ({
-        x: lerp(prev.x, target1.x, 0.08),
-        y: lerp(prev.y, target1.y, 0.08),
-      }));
-      setP2Pos((prev) => ({
-        x: lerp(prev.x, target2.x, 0.08),
-        y: lerp(prev.y, target2.y, 0.08),
-      }));
+
+      const target1 = getTargetPosition(p1Anim, "left", p1Base.current, p2Pos);
+      const target2 = getTargetPosition(p2Anim, "right", p2Base.current, p1Pos);
+
+      setP1Pos((prev) => {
+        // Jump physics
+        let z = prev.z + p1JumpVel.current;
+        p1JumpVel.current -= GRAVITY;
+        if (z <= 0) {
+          z = 0;
+          // Landing detection
+          if (p1WasAirborne.current) {
+            setP1Landing(true);
+            setTimeout(() => setP1Landing(false), 300);
+          }
+          p1JumpVel.current = 0;
+        }
+        p1WasAirborne.current = z > 0.5;
+
+        return clampToArena({
+          x: lerp(prev.x, target1.x, 0.08),
+          y: lerp(prev.y, target1.y, 0.08),
+          z,
+        });
+      });
+
+      setP2Pos((prev) => {
+        let z = prev.z + p2JumpVel.current;
+        p2JumpVel.current -= GRAVITY;
+        if (z <= 0) {
+          z = 0;
+          if (p2WasAirborne.current) {
+            setP2Landing(true);
+            setTimeout(() => setP2Landing(false), 300);
+          }
+          p2JumpVel.current = 0;
+        }
+        p2WasAirborne.current = z > 0.5;
+
+        return clampToArena({
+          x: lerp(prev.x, target2.x, 0.08),
+          y: lerp(prev.y, target2.y, 0.08),
+          z,
+        });
+      });
+
       animFrameRef.current = requestAnimationFrame(animate);
     };
     animFrameRef.current = requestAnimationFrame(animate);
@@ -676,6 +889,7 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
     };
   }, [p1Anim, p2Anim]);
 
+  // Dynamic facing — fighters always face each other
   const p1FacingRight = p1Pos.x < p2Pos.x;
 
   // ── Camera Shake + Zoom Pulse ───────────────────────────
@@ -788,12 +1002,16 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
         animState={p1Anim}
         flipX={!p1FacingRight}
         pos={p1Pos}
+        arena={arena}
+        isLanding={p1Landing}
       />
       <FighterSprite
         characterId={p2Char}
         animState={p2Anim}
         flipX={p1FacingRight}
         pos={p2Pos}
+        arena={arena}
+        isLanding={p2Landing}
       />
 
       {/* Hit Sparks */}
@@ -888,6 +1106,20 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
           55% { transform: translate(2px, -1px) scale(1.008); }
           70% { transform: translate(-1px, 0) scale(1.003); }
           100% { transform: translate(0, 0) scale(1); }
+        }
+
+        /* ── Action Glow Pulse ────────────────────── */
+        @keyframes glowPulse {
+          0% { opacity: 0; transform: translateX(-50%) scale(0.6); }
+          30% { opacity: 1; transform: translateX(-50%) scale(1); }
+          100% { opacity: 0; transform: translateX(-50%) scale(1.3); }
+        }
+
+        /* ── Landing Ring ────────────────────────── */
+        @keyframes landingRing {
+          0% { opacity: 0.8; transform: translateX(-50%) scale(0.5); }
+          50% { opacity: 0.5; transform: translateX(-50%) scale(1.5); }
+          100% { opacity: 0; transform: translateX(-50%) scale(2.2); }
         }
 
         /* ── Damage Float ─────────────────────────── */
