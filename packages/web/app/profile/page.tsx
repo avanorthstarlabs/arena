@@ -68,6 +68,72 @@ export default function ProfilePage() {
   // Replay state
   const [replayFight, setReplayFight] = useState<string | null>(null);
 
+  // Wallet state
+  const [walletBalance, setWalletBalance] = useState<string | null>(null);
+  const [depositAddress, setDepositAddress] = useState<string | null>(null);
+  const [depositToken, setDepositToken] = useState<string>("ETH");
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawStatus, setWithdrawStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [withdrawError, setWithdrawError] = useState("");
+  const [withdrawTxHash, setWithdrawTxHash] = useState("");
+  const [transactions, setTransactions] = useState<Array<{ id: string; type: string; amount: string; txHash: string | null; createdAt: string }>>([]);
+  const [copied, setCopied] = useState(false);
+
+  const fetchWalletData = useCallback(async () => {
+    if (!address) return;
+    try {
+      const [balRes, depRes, txRes] = await Promise.all([
+        fetch(`${SERVER}/api/v1/balance/${address}`),
+        fetch(`${SERVER}/api/v1/deposit-address`),
+        fetch(`${SERVER}/api/v1/transactions/${address}`),
+      ]);
+      if (balRes.ok) {
+        const bal = await balRes.json();
+        setWalletBalance(bal.balance);
+      } else {
+        setWalletBalance("0");
+      }
+      if (depRes.ok) {
+        const dep = await depRes.json();
+        setDepositAddress(dep.address);
+        setDepositToken(dep.token);
+      }
+      if (txRes.ok) {
+        const txData = await txRes.json();
+        setTransactions(txData.transactions ?? []);
+      }
+    } catch {
+      // silently fail
+    }
+  }, [address]);
+
+  const handleWithdraw = async () => {
+    if (!address || !withdrawAmount) return;
+    setWithdrawStatus("submitting");
+    setWithdrawError("");
+    setWithdrawTxHash("");
+    try {
+      const res = await fetch(`${SERVER}/api/v1/withdraw`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wallet_address: address, amount: withdrawAmount }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setWithdrawStatus("success");
+        setWithdrawTxHash(data.txHash);
+        setWithdrawAmount("");
+        fetchWalletData();
+      } else {
+        setWithdrawError(data.error || "Withdrawal failed");
+        setWithdrawStatus("error");
+      }
+    } catch {
+      setWithdrawError("Request failed");
+      setWithdrawStatus("error");
+    }
+  };
+
   const fetchAgents = useCallback(async () => {
     if (!address) return;
     setLoading(true);
@@ -83,8 +149,11 @@ export default function ProfilePage() {
   }, [address]);
 
   useEffect(() => {
-    if (isConnected && address) fetchAgents();
-  }, [isConnected, address, fetchAgents]);
+    if (isConnected && address) {
+      fetchAgents();
+      fetchWalletData();
+    }
+  }, [isConnected, address, fetchAgents, fetchWalletData]);
 
   const fetchFights = async (username: string) => {
     if (fights[username]) {
@@ -232,6 +301,139 @@ export default function ProfilePage() {
       <p style={{ color: "#ccc", fontSize: 12, fontFamily: "monospace", marginBottom: 32 }}>
         {address}
       </p>
+
+      {/* --- Wallet --- */}
+      <div style={{
+        border: "1px solid rgba(57,255,20,0.2)",
+        background: "rgba(57,255,20,0.02)",
+        padding: 24,
+        marginBottom: 32,
+      }}>
+        <h2 style={{ color: "#39ff14", fontSize: 14, fontWeight: 700, letterSpacing: 2, marginBottom: 16 }}>
+          WALLET
+        </h2>
+
+        {/* Balance */}
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 20 }}>
+          <span style={{ color: "#39ff14", fontSize: 32, fontWeight: 900, fontFamily: "monospace" }}>
+            {walletBalance ?? "—"}
+          </span>
+          <span style={{ color: "#ccc", fontSize: 14, fontFamily: "monospace" }}>{depositToken}</span>
+        </div>
+
+        {/* Deposit */}
+        {depositAddress && (
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ color: "#fff", fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>
+              DEPOSIT {depositToken} ON BASE
+            </div>
+            <div
+              onClick={() => {
+                navigator.clipboard.writeText(depositAddress);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+              style={{
+                padding: "10px 14px",
+                background: "rgba(0,0,0,0.5)",
+                border: "1px solid rgba(57,255,20,0.2)",
+                fontFamily: "monospace",
+                fontSize: 12,
+                color: "#fff",
+                cursor: "pointer",
+                wordBreak: "break-all",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <span>{depositAddress}</span>
+              <span style={{ color: "#39ff14", fontSize: 10, fontWeight: 700, marginLeft: 12, flexShrink: 0 }}>
+                {copied ? "COPIED" : "COPY"}
+              </span>
+            </div>
+            <div style={{ color: "#888", fontSize: 10, marginTop: 6 }}>
+              Send {depositToken} on Base network to this address. Balance updates automatically.
+            </div>
+          </div>
+        )}
+
+        {/* Withdraw */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ color: "#fff", fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>
+            WITHDRAW
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              type="text"
+              placeholder={`Amount in ${depositToken}`}
+              value={withdrawAmount}
+              onChange={(e) => setWithdrawAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+              style={{
+                flex: 1,
+                padding: "10px 14px",
+                background: "rgba(0,0,0,0.5)",
+                border: "1px solid rgba(57,255,20,0.2)",
+                color: "#fff",
+                fontFamily: "monospace",
+                fontSize: 13,
+                outline: "none",
+              }}
+            />
+            <button
+              onClick={handleWithdraw}
+              disabled={!withdrawAmount || withdrawStatus === "submitting"}
+              style={{
+                padding: "10px 24px",
+                background: withdrawAmount ? "#39ff14" : "transparent",
+                border: `1px solid ${withdrawAmount ? "#39ff14" : "#555"}`,
+                color: withdrawAmount ? "#0a0a0f" : "#ddd",
+                fontFamily: "monospace",
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: 2,
+                cursor: withdrawAmount ? "pointer" : "default",
+                opacity: withdrawStatus === "submitting" ? 0.5 : 1,
+              }}
+            >
+              {withdrawStatus === "submitting" ? "..." : "WITHDRAW"}
+            </button>
+          </div>
+          {withdrawStatus === "success" && (
+            <div style={{ color: "#39ff14", fontSize: 11, marginTop: 8 }}>
+              Sent! tx: {withdrawTxHash.slice(0, 10)}...{withdrawTxHash.slice(-8)}
+            </div>
+          )}
+          {withdrawError && (
+            <div style={{ color: "#ff3939", fontSize: 11, marginTop: 8 }}>{withdrawError}</div>
+          )}
+        </div>
+
+        {/* Transaction History */}
+        {transactions.length > 0 && (
+          <div>
+            <div style={{ color: "#fff", fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>
+              RECENT TRANSACTIONS
+            </div>
+            {transactions.slice(0, 10).map((tx) => (
+              <div key={tx.id} style={{
+                display: "flex",
+                justifyContent: "space-between",
+                padding: "6px 0",
+                borderBottom: "1px solid rgba(255,255,255,0.05)",
+                fontSize: 11,
+                fontFamily: "monospace",
+              }}>
+                <span style={{ color: tx.type === "deposit" ? "#39ff14" : "#ff6b6b", fontWeight: 700, width: 80 }}>
+                  {tx.type.toUpperCase()}
+                </span>
+                <span style={{ color: "#fff" }}>{tx.amount} {depositToken}</span>
+                <span style={{ color: "#888" }}>{new Date(tx.createdAt).toLocaleDateString()}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* --- Owned Agents --- */}
       {loading ? (

@@ -1,6 +1,7 @@
 import express, { Router } from "express";
 import { prisma } from "../db/client.js";
 import { processWithdrawal } from "./withdrawal.js";
+import { config } from "../config.js";
 import { z } from "zod";
 import { withdrawLimiter } from "../middleware/rate-limit.js";
 
@@ -9,6 +10,20 @@ import { withdrawLimiter } from "../middleware/rate-limit.js";
  */
 export function createChainRouter(): Router {
   const router = express.Router();
+
+  /**
+   * GET /deposit-address
+   * Returns the master deposit address and token mode for the frontend
+   */
+  router.get("/deposit-address", (_req, res) => {
+    if (!config.masterDepositAddress) {
+      return res.status(503).json({ error: "Deposits not configured" });
+    }
+    return res.json({
+      address: config.masterDepositAddress,
+      token: config.arenaTokenAddress ? "NORTH" : "ETH",
+    });
+  });
 
   /**
    * GET /balance/:address

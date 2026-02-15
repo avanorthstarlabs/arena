@@ -2,6 +2,7 @@ import {
   createWalletClient,
   http,
   parseUnits,
+  parseEther,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { base } from "viem/chains";
@@ -24,9 +25,7 @@ export async function processWithdrawal(
     throw new Error("HOT_WALLET_PRIVATE_KEY not configured");
   }
 
-  if (!config.arenaTokenAddress) {
-    throw new Error("NORTH_TOKEN_ADDRESS not configured");
-  }
+  const useErc20 = !!config.arenaTokenAddress;
 
   const amountDecimal = new Decimal(amount);
 
@@ -39,9 +38,10 @@ export async function processWithdrawal(
     throw new Error(`User not found: ${walletAddress}`);
   }
 
+  const tokenLabel = useErc20 ? "NORTH" : "ETH";
   if (user.balance.lessThan(amountDecimal)) {
     throw new Error(
-      `Insufficient balance. User has ${user.balance} NORTH, requested ${amount} NORTH`
+      `Insufficient balance. User has ${user.balance} ${tokenLabel}, requested ${amount} ${tokenLabel}`
     );
   }
 
@@ -89,23 +89,32 @@ export async function processWithdrawal(
         transport: http(config.baseRpcUrl),
       });
 
-      const amountInWei = parseUnits(amount, 18);
-
+      const tokenLabel = useErc20 ? "NORTH" : "ETH";
       console.log(
-        `[Withdrawal] Sending ${amount} NORTH to ${walletAddress} from hot wallet ${account.address}`
+        `[Withdrawal] Sending ${amount} ${tokenLabel} to ${walletAddress} from hot wallet ${account.address}`
       );
 
-      // Send the transfer transaction
-      txHash = await walletClient.writeContract({
-        account,
-        address: config.arenaTokenAddress as `0x${string}`,
-        abi: erc20Abi,
-        functionName: "transfer",
-        args: [walletAddress as `0x${string}`, amountInWei],
-      });
+      if (useErc20) {
+        // ERC-20 mode: call transfer() on token contract
+        const amountInWei = parseUnits(amount, 18);
+        txHash = await walletClient.writeContract({
+          account,
+          address: config.arenaTokenAddress as `0x${string}`,
+          abi: erc20Abi,
+          functionName: "transfer",
+          args: [walletAddress as `0x${string}`, amountInWei],
+        });
+      } else {
+        // Native ETH mode: direct value transfer
+        txHash = await walletClient.sendTransaction({
+          account,
+          to: walletAddress as `0x${string}`,
+          value: parseEther(amount),
+        });
+      }
 
       console.log(
-        `[Withdrawal] Transaction sent: ${txHash} for ${amount} NORTH to ${walletAddress}`
+        `[Withdrawal] Transaction sent: ${txHash} for ${amount} ${tokenLabel} to ${walletAddress}`
       );
 
       // Update transaction record with txHash

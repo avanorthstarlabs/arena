@@ -3,6 +3,7 @@ import {
   http,
   parseUnits,
   formatUnits,
+  formatEther,
   Hash,
 } from "viem";
 import { base } from "viem/chains";
@@ -17,10 +18,8 @@ let watchUnsubscribe: (() => void) | null = null;
  * Start watching for deposit events on the ARENA token
  */
 export async function startDepositWatcher(): Promise<void> {
-  if (!config.arenaTokenAddress || !config.masterDepositAddress) {
-    console.error(
-      "Missing NORTH_TOKEN_ADDRESS or MASTER_DEPOSIT_ADDRESS config"
-    );
+  if (!config.masterDepositAddress) {
+    console.error("Missing MASTER_DEPOSIT_ADDRESS config");
     return;
   }
 
@@ -29,48 +28,86 @@ export async function startDepositWatcher(): Promise<void> {
     transport: http(config.baseRpcUrl),
   });
 
+  const useErc20 = !!config.arenaTokenAddress;
+  const mode = useErc20 ? "ERC-20" : "native ETH";
   console.log(
-    `[Deposit Watcher] Starting to watch ${config.arenaTokenAddress} for deposits to ${config.masterDepositAddress}`
+    `[Deposit Watcher] Starting in ${mode} mode, watching deposits to ${config.masterDepositAddress}`
   );
 
   try {
-    // Watch for Transfer events where 'to' is the master deposit address
-    watchUnsubscribe = publicClient.watchContractEvent({
-      address: config.arenaTokenAddress as `0x${string}`,
-      abi: erc20Abi,
-      eventName: "Transfer",
-      onLogs: async (logs) => {
-        for (const log of logs) {
-          if (log.eventName === "Transfer") {
-            const { args } = log as {
-              args: { from?: string; to?: string; value?: bigint };
-            };
+    if (useErc20) {
+      // ERC-20 mode: watch Transfer events on the token contract
+      watchUnsubscribe = publicClient.watchContractEvent({
+        address: config.arenaTokenAddress as `0x${string}`,
+        abi: erc20Abi,
+        eventName: "Transfer",
+        onLogs: async (logs) => {
+          for (const log of logs) {
+            if (log.eventName === "Transfer") {
+              const { args } = log as {
+                args: { from?: string; to?: string; value?: bigint };
+              };
 
-            if (
-              args.to?.toLowerCase() ===
-                config.masterDepositAddress!.toLowerCase() &&
-              args.from &&
-              args.value
-            ) {
-              try {
-                await processDeposit(
-                  args.from,
-                  formatUnits(args.value, 18),
-                  (log.transactionHash || "") as string
-                );
-              } catch (error) {
-                console.error(
-                  `[Deposit Watcher] Error processing deposit: ${error}`
-                );
+              if (
+                args.to?.toLowerCase() ===
+                  config.masterDepositAddress!.toLowerCase() &&
+                args.from &&
+                args.value
+              ) {
+                try {
+                  await processDeposit(
+                    args.from,
+                    formatUnits(args.value, 18),
+                    (log.transactionHash || "") as string
+                  );
+                } catch (error) {
+                  console.error(
+                    `[Deposit Watcher] Error processing deposit: ${error}`
+                  );
+                }
               }
             }
           }
-        }
-      },
-      onError: (error) => {
-        console.error("[Deposit Watcher] Watch error:", error);
-      },
-    });
+        },
+        onError: (error) => {
+          console.error("[Deposit Watcher] Watch error:", error);
+        },
+      });
+    } else {
+      // Native ETH mode: scan blocks for value transfers to deposit address
+      watchUnsubscribe = publicClient.watchBlockNumber({
+        onBlockNumber: async (blockNumber) => {
+          try {
+            const block = await publicClient.getBlock({
+              blockNumber,
+              includeTransactions: true,
+            });
+            for (const tx of block.transactions) {
+              if (
+                typeof tx === "object" &&
+                tx.to?.toLowerCase() ===
+                  config.masterDepositAddress!.toLowerCase() &&
+                tx.value > 0n
+              ) {
+                await processDeposit(
+                  tx.from,
+                  formatEther(tx.value),
+                  tx.hash
+                );
+              }
+            }
+          } catch (error) {
+            console.error(
+              "[Deposit Watcher] Block processing error:",
+              error
+            );
+          }
+        },
+        onError: (error) => {
+          console.error("[Deposit Watcher] Watch error:", error);
+        },
+      });
+    }
   } catch (error) {
     console.error("[Deposit Watcher] Failed to start watching:", error);
     throw error;
@@ -115,7 +152,7 @@ export async function processDeposit(
           },
         });
         console.log(
-          `[Deposit Watcher] Created new user: ${fromAddress} with balance ${amount}`
+          `[Deposit Watcher] Created new user: ${fromAddress} with balance ${amount} ${config.arenaTokenAddress ? "NORTH" : "ETH"}`
         );
       } else {
         // Update existing user balance
@@ -131,7 +168,7 @@ export async function processDeposit(
           },
         });
         console.log(
-          `[Deposit Watcher] Credited ${amount} NORTH to ${fromAddress}, new balance: ${user.balance}`
+          `[Deposit Watcher] Credited ${amount} ${config.arenaTokenAddress ? "NORTH" : "ETH"} to ${fromAddress}, new balance: ${user.balance}`
         );
       }
 
@@ -147,7 +184,7 @@ export async function processDeposit(
     });
 
     console.log(
-      `[Deposit Watcher] Processed deposit: ${amount} NORTH from ${fromAddress}, txHash: ${txHash}`
+      `[Deposit Watcher] Processed deposit: ${amount} ${config.arenaTokenAddress ? "NORTH" : "ETH"} from ${fromAddress}, txHash: ${txHash}`
     );
   } catch (error) {
     console.error(
