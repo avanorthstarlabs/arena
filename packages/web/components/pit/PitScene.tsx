@@ -127,16 +127,55 @@ function AmbientParticles({ count }: { count: number }) {
 function PitAgentSprite({
   agent,
   bubble,
+  wagers,
+  allAgents,
 }: {
   agent: PitAgent;
   bubble?: ChatBubble;
+  wagers: WagerWindow[];
+  allAgents: PitAgent[];
 }) {
   const [frame, setFrame] = useState(0);
+  const [wanderOffset, setWanderOffset] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const seed = hashCode(agent.agentId);
+    const phaseX = (seed % 100) / 100 * Math.PI * 2;
+    const phaseY = ((seed >> 8) % 100) / 100 * Math.PI * 2;
+    const speedX = 0.3 + (seed % 50) / 100; // 0.3-0.8
+    const speedY = 0.2 + ((seed >> 4) % 50) / 100; // 0.2-0.7
+
+    const iv = setInterval(() => {
+      const t = Date.now() / 1000;
+      setWanderOffset({
+        x: Math.sin(t * speedX + phaseX) * 1.5, // ±1.5% screen offset
+        y: Math.sin(t * speedY + phaseY) * 0.5, // ±0.5% screen offset
+      });
+    }, 50);
+    return () => clearInterval(iv);
+  }, [agent.agentId]);
+
   const pos = getAgentPosition(agent.agentId);
   const depthScale = 1.0 - pos.y * 0.25;
-  const screenX = 50 + pos.x * 30;
-  const bottomPct = 12 + pos.y * 16;
+  const screenX = 50 + pos.x * 30 + wanderOffset.x;
+  const bottomPct = 12 + pos.y * 16 + wanderOffset.y;
   const zIdx = Math.round((1 - pos.y) * 20) + 10;
+
+  // Determine facing direction (for callout facing)
+  let facingFlip = 1; // 1 = default, -1 = flipped
+  const activeWager = wagers.find(
+    (w) => (w.from === agent.username || w.target === agent.username) && w.status !== "declined"
+  );
+  if (activeWager) {
+    const otherName = activeWager.from === agent.username ? activeWager.target : activeWager.from;
+    const otherAgent = allAgents.find((a) => a.username === otherName);
+    if (otherAgent) {
+      const otherPos = getAgentPosition(otherAgent.agentId);
+      const otherScreenX = 50 + otherPos.x * 30;
+      facingFlip = otherScreenX > screenX ? 1 : -1;
+    }
+  }
+
   const spriteSize = Math.round(140 * depthScale);
   const sheetSize = spriteSize * 4;
 
@@ -242,6 +281,7 @@ function PitAgentSprite({
           backgroundRepeat: "no-repeat",
           imageRendering: "pixelated",
           filter: `drop-shadow(0 0 8px ${PIT_CONFIG.accentColor}30)`,
+          transform: facingFlip === -1 ? "scaleX(-1)" : "none",
         }}
       />
     </div>
@@ -417,6 +457,8 @@ export default function PitScene({ agents, bubbles, wagers, agentCount }: PitSce
           key={agent.agentId}
           agent={agent}
           bubble={bubbleMap.get(agent.agentId)}
+          wagers={wagers}
+          allAgents={agents}
         />
       ))}
 
