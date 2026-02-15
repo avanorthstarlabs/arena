@@ -373,72 +373,164 @@ export default function PitScene({ agents, bubbles, wagers, agentCount }: PitSce
 
   return (
     <div style={{ position: "relative", width: "100%", height: "calc(100vh - 200px)", overflow: "hidden", background: "#080810" }}>
-      {/* Background */}
+      {/* Background panorama — matches ArenaScene approach */}
       <div
         style={{
           position: "absolute",
-          inset: 0,
+          top: 0,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "100%",
+          maxWidth: 1920,
+          height: "68%",
           backgroundImage: `url(${PIT_CONFIG.bgImage})`,
           backgroundSize: "cover",
-          backgroundPosition: "center",
-          filter: moodStyle.filter,
+          backgroundPosition: "center bottom",
+          backgroundRepeat: "no-repeat",
+          imageRendering: "pixelated",
+          filter: `blur(1.2px) ${moodStyle.filter}`,
           transition: "filter 1.5s ease",
         }}
       />
 
-      {/* Crowd layer */}
+      {/* Vignette overlay — always present, matches ArenaScene */}
       <div
         style={{
           position: "absolute",
-          top: "10%",
-          left: 0,
-          right: 0,
-          height: "25%",
-          backgroundImage: `url(${PIT_CONFIG.crowdImage})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center bottom",
-          opacity: 0.6,
-          pointerEvents: "none",
+          inset: 0,
+          background: `
+            radial-gradient(ellipse at 50% 35%, transparent 30%, #080810cc 85%),
+            linear-gradient(to bottom, transparent 45%, #080810 72%)
+          `,
+          zIndex: 1,
         }}
       />
 
-      {/* Floor */}
+      {/* Crowd layer — crisp pixel art, matches ArenaScene positioning */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: "32%",
+          left: 0,
+          right: 0,
+          height: "24%",
+          zIndex: 0,
+          pointerEvents: "none",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: "-2%",
+            right: "-2%",
+            height: "100%",
+            backgroundImage: `url(${PIT_CONFIG.crowdImage})`,
+            backgroundSize: "auto 100%",
+            backgroundRepeat: "repeat-x",
+            backgroundPosition: "center bottom",
+            imageRendering: "pixelated",
+            filter: "brightness(0.7)",
+            opacity: 0.9,
+          }}
+        />
+        {/* Top fade */}
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "35%",
+            background: "linear-gradient(to bottom, #080810, transparent)",
+          }}
+        />
+        {/* Side fades */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(to right, #080810 0%, transparent 8%, transparent 92%, #080810 100%)",
+          }}
+        />
+      </div>
+
+      {/* Floor — matches ArenaScene perspective (800px, 60deg) */}
       <div
         style={{
           position: "absolute",
           bottom: 0,
-          left: "-10%",
-          right: "-10%",
-          height: "40%",
-          transform: "perspective(500px) rotateX(25deg)",
-          transformOrigin: "bottom center",
-          backgroundImage: `url(${PIT_CONFIG.floorImage})`,
-          backgroundSize: "180px 180px",
-          backgroundRepeat: "repeat",
-          imageRendering: "pixelated" as const,
-          opacity: 0.7,
+          left: 0,
+          right: 0,
+          height: "42%",
+          perspective: "800px",
+          perspectiveOrigin: "50% 20%",
+          zIndex: 1,
         }}
-      />
+      >
+        <div
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: "-20%",
+            right: "-20%",
+            height: "100%",
+            transform: "rotateX(60deg)",
+            transformOrigin: "center bottom",
+            backgroundImage: `url(${PIT_CONFIG.floorImage})`,
+            backgroundSize: "180px 180px",
+            backgroundRepeat: "repeat",
+            imageRendering: "pixelated",
+          }}
+        />
 
-      {/* Floor glow — intensifies with mood */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: "5%",
-          left: "20%",
-          right: "20%",
-          height: "20%",
-          borderRadius: "50%",
-          background: `radial-gradient(ellipse, ${PIT_CONFIG.accentColor}${Math.round(moodStyle.glowOpacity * 255).toString(16).padStart(2, "0")} 0%, transparent 70%)`,
-          transition: "all 1.5s ease",
-          pointerEvents: "none",
-        }}
-      />
+        {/* Floor glow — intensifies with mood */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: "5%",
+            left: "50%",
+            transform: "translateX(-50%) rotateX(60deg)",
+            transformOrigin: "center bottom",
+            width: "70%",
+            height: "85%",
+            borderRadius: "50%",
+            border: `2px solid ${PIT_CONFIG.accentGlow}`,
+            boxShadow: `0 0 ${Math.round(20 + moodStyle.glowOpacity * 60)}px ${PIT_CONFIG.accentGlow}, inset 0 0 40px rgba(0,0,0,0.3)`,
+            transition: "box-shadow 1.5s ease",
+            pointerEvents: "none",
+          }}
+        />
+
+        {/* Side fades */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(to right, #080810 0%, transparent 15%, transparent 85%, #080810 100%)",
+            pointerEvents: "none",
+          }}
+        />
+
+        {/* Bottom fade */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: "15%",
+            background: "linear-gradient(to top, #080810, transparent)",
+            pointerEvents: "none",
+          }}
+        />
+      </div>
 
       {/* Ambient particles */}
       <AmbientParticles count={moodStyle.particleCount} />
 
-      {/* Vignette on heated mood */}
+      {/* Vignette intensifies on heated mood */}
       {mood === "heated" && (
         <div
           style={{

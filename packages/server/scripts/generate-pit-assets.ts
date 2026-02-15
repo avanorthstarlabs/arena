@@ -23,37 +23,35 @@ const TASKS: GenerationTask[] = [
   {
     name: "Pit Background",
     filename: "pit-bg.png",
-    prompt: `Digital painting of a massive underground fighting arena lobby, dark atmospheric scene.
-Grand stone colosseum interior with tiered seating rising into darkness on both sides.
-Wide open floor area in the center, worn stone tiles.
-Neon green magical torches and braziers provide eerie lighting along the walls.
-Gothic architecture with massive pillars, arched doorways, and chains hanging from ceiling.
-Dark fantasy style. Moody, atmospheric. Green accent lighting.
-The space feels grand and spacious, like a famous underground venue.
-No characters or fighters in the scene. Empty but alive with ambient light.
-Style: detailed painterly digital art, dark color palette with neon green highlights.
-Resolution: 1920x1080. Landscape orientation.`,
+    prompt: `Pixel art background for a retro 2D fighting game. 16-bit SNES era graphics.
+Scene: A grand underground colosseum pit where fighters gather. Gothic stone architecture.
+Massive vaulted ceiling with chains hanging down. Tall stone pillars on both sides with arched doorways.
+Bright neon green (#39ff14) glowing circuit-board patterns carved into the stone walls, like magical runes.
+Green-glowing crystal chandeliers or braziers providing the main light source.
+Dark navy blue and black color palette with vivid neon green as the only bright color.
+Every element is constructed from visible square pixels. Blocky shapes. No smooth gradients.
+The entire image looks like it belongs in a Super Nintendo or Game Boy Advance game.
+No characters or people. Wide landscape panoramic format. The background should feel like a classic pixel art fighting game stage like Street Fighter II or King of Fighters.`,
   },
   {
     name: "Pit Floor Texture",
     filename: "pit-floor.png",
-    prompt: `Seamless tileable stone floor texture for a dark fantasy fighting arena.
-Worn cobblestone with subtle cracks, old bloodstains, moss in gaps.
-Dark gray and charcoal tones with subtle green-tinted lighting highlights.
-Top-down view. Seamless repeating pattern.
-Style: detailed painterly digital art matching a gothic underground colosseum.
-Resolution: 512x512. Must tile seamlessly.`,
+    prompt: `16-bit pixel art seamless tileable floor texture. Top-down view.
+Dark hexagonal stone tiles with neon green glowing edges and cracks between tiles.
+Some tiles slightly cracked or damaged. Occasional small green flame or ember between tiles.
+Dark gray, charcoal and navy blue tones with bright neon green (#39ff14) highlights in the cracks.
+Style: 16-bit pixel art, visible individual pixels, clean geometric shapes, retro game aesthetic.
+Must be seamless and tileable. 512x512 pixels.`,
   },
   {
-    name: "Pit Crowd Silhouettes",
+    name: "Pit Crowd",
     filename: "pit-crowd.png",
-    prompt: `Silhouette of spectator crowd for a dark fantasy underground fighting arena.
-Dark shadowy figures sitting in tiered stone seating, barely visible.
-Hints of neon green light reflecting off some figures.
-Semi-transparent feel, atmospheric background element.
-Wide panoramic format. Very dark with subtle figure outlines.
-Style: painterly digital art, dark atmospheric.
-Resolution: 1920x200. Wide banner format.`,
+    prompt: `16-bit pixel art crowd of tiny spectators in tiered seating for a dark fantasy fighting arena.
+Multiple rows of small pixel-art people sitting in stone bleachers. Each figure is only 8-12 pixels tall.
+Variety of colors for their clothes — some have glowing items. Dark background behind them.
+The crowd faces forward toward the viewer. Some figures have tiny glowing eyes or accessories.
+Style: 16-bit pixel art like SNES/GBA games. Visible individual pixels. Dark palette with colorful tiny characters.
+Wide panoramic banner format. Similar to retro fighting game audience sprites.`,
   },
 ];
 
