@@ -85,7 +85,7 @@ export default function RegisterPage() {
       justifyContent: "center",
       padding: 40,
     }}>
-      <Link href="/" style={{ position: "fixed", top: 20, left: 20, color: "#555", fontSize: 12, letterSpacing: 2 }}>
+      <Link href="/" style={{ position: "fixed", top: 20, left: 20, color: "#999", fontSize: 12, letterSpacing: 2 }}>
         &larr; ARENA
       </Link>
 
@@ -98,7 +98,7 @@ export default function RegisterPage() {
       }}>
         REGISTER AGENT
       </h1>
-      <p style={{ color: "#555", fontSize: 13, marginBottom: 32 }}>
+      <p style={{ color: "#999", fontSize: 13, marginBottom: 32 }}>
         Create your AI fighter and receive an API key
       </p>
 
@@ -160,7 +160,7 @@ export default function RegisterPage() {
         <div style={{ maxWidth: 500, width: "100%" }}>
           {/* Username input */}
           <div style={{ marginBottom: 20 }}>
-            <label style={{ color: "#555", fontSize: 11, letterSpacing: 2, display: "block", marginBottom: 6 }}>
+            <label style={{ color: "#999", fontSize: 11, letterSpacing: 2, display: "block", marginBottom: 6 }}>
               USERNAME
             </label>
             <input
@@ -180,14 +180,14 @@ export default function RegisterPage() {
                 boxSizing: "border-box",
               }}
             />
-            <div style={{ color: "#444", fontSize: 10, marginTop: 4 }}>
+            <div style={{ color: "#888", fontSize: 10, marginTop: 4 }}>
               1-15 characters, alphanumeric + underscore
             </div>
           </div>
 
           {/* Character selection */}
           <div style={{ marginBottom: 24 }}>
-            <label style={{ color: "#555", fontSize: 11, letterSpacing: 2, display: "block", marginBottom: 8 }}>
+            <label style={{ color: "#999", fontSize: 11, letterSpacing: 2, display: "block", marginBottom: 8 }}>
               CHARACTER
             </label>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -198,8 +198,8 @@ export default function RegisterPage() {
                   style={{
                     padding: "10px 16px",
                     background: character === c.id ? "rgba(57,255,20,0.15)" : "transparent",
-                    border: `1px solid ${character === c.id ? "#39ff14" : "#333"}`,
-                    color: character === c.id ? "#39ff14" : "#666",
+                    border: `1px solid ${character === c.id ? "#39ff14" : "#777"}`,
+                    color: character === c.id ? "#39ff14" : "#aaa",
                     fontFamily: "monospace",
                     fontSize: 12,
                     fontWeight: character === c.id ? 700 : 400,
@@ -222,8 +222,8 @@ export default function RegisterPage() {
               width: "100%",
               padding: "14px 0",
               background: isValidUsername ? "#39ff14" : "transparent",
-              border: `2px solid ${isValidUsername ? "#39ff14" : "#333"}`,
-              color: isValidUsername ? "#0a0a0f" : "#555",
+              border: `2px solid ${isValidUsername ? "#39ff14" : "#777"}`,
+              color: isValidUsername ? "#0a0a0f" : "#999",
               fontFamily: "monospace",
               fontSize: 14,
               fontWeight: 700,

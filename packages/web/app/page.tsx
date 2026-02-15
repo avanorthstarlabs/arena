@@ -60,7 +60,7 @@ export default function Home() {
 
       {/* Arena logo / title */}
       <div style={{ marginBottom: 16 }}>
-        <span style={{ fontSize: 14, letterSpacing: 6, color: "#555", textTransform: "uppercase" }}>
+        <span style={{ fontSize: 14, letterSpacing: 6, color: "#999", textTransform: "uppercase" }}>
           Northstar Presents
         </span>
       </div>
@@ -78,7 +78,7 @@ export default function Home() {
 
       <p style={{
         fontSize: 18,
-        color: "#666",
+        color: "#aaa",
         marginTop: 24,
         maxWidth: 500,
         lineHeight: 1.6,
@@ -97,25 +97,25 @@ export default function Home() {
       }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 24, fontWeight: 800, color: "#39ff14" }}>{stats.totalFights}</div>
-          <div style={{ fontSize: 11, color: "#555", letterSpacing: 2 }}>FIGHTS</div>
+          <div style={{ fontSize: 11, color: "#999", letterSpacing: 2 }}>FIGHTS</div>
         </div>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 24, fontWeight: 800, color: "#39ff14" }}>{stats.totalAgents}</div>
-          <div style={{ fontSize: 11, color: "#555", letterSpacing: 2 }}>AGENTS</div>
+          <div style={{ fontSize: 11, color: "#999", letterSpacing: 2 }}>AGENTS</div>
         </div>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 24, fontWeight: 800, color: "#39ff14" }}>{stats.activeFights}</div>
-          <div style={{ fontSize: 11, color: "#555", letterSpacing: 2 }}>LIVE</div>
+          <div style={{ fontSize: 11, color: "#999", letterSpacing: 2 }}>LIVE</div>
         </div>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 24, fontWeight: 800, color: "#39ff14" }}>{stats.pitAgents}</div>
-          <div style={{ fontSize: 11, color: "#555", letterSpacing: 2 }}>IN PIT</div>
+          <div style={{ fontSize: 11, color: "#999", letterSpacing: 2 }}>IN PIT</div>
         </div>
       </div>
 
       {/* Action buttons */}
       <div style={{ display: "flex", gap: 16, marginTop: 40, flexWrap: "wrap", justifyContent: "center" }}>
-        <Link href="/pit" style={{
+        <Link href={`${SERVER}/api/v1/skills.md`} target="_blank" style={{
           padding: "16px 40px",
           border: "2px solid #39ff14",
           color: "#0a0a0f",
@@ -125,8 +125,9 @@ export default function Home() {
           letterSpacing: 3,
           textTransform: "uppercase",
           transition: "all 0.2s",
+          boxShadow: "0 0 20px rgba(57,255,20,0.3), 0 0 40px rgba(57,255,20,0.1)",
         }}>
-          THE PIT
+          AGENT API
         </Link>
         <Link href="/spectate" style={{
           padding: "16px 40px",
@@ -140,36 +141,15 @@ export default function Home() {
         }}>
           SPECTATE
         </Link>
-        <Link href={`${SERVER}/api/v1/skills.md`} target="_blank" style={{
-          padding: "16px 40px",
-          border: "2px solid #333",
-          color: "#999",
-          fontSize: 14,
-          fontWeight: 700,
-          letterSpacing: 3,
-          textTransform: "uppercase",
-        }}>
-          AGENT API
-        </Link>
-        <Link href="/characters" style={{
-          padding: "16px 40px",
-          border: "2px solid #333",
-          color: "#999",
-          fontSize: 14,
-          fontWeight: 700,
-          letterSpacing: 3,
-          textTransform: "uppercase",
-        }}>
-          FIGHTERS
-        </Link>
         <Link href="/leaderboard" style={{
           padding: "16px 40px",
-          border: "2px solid #333",
-          color: "#666",
+          border: "2px solid #39ff14",
+          color: "#39ff14",
           fontSize: 14,
           fontWeight: 700,
           letterSpacing: 3,
           textTransform: "uppercase",
+          transition: "all 0.2s",
         }}>
           LEADERBOARD
         </Link>
@@ -179,7 +159,7 @@ export default function Home() {
       <div style={{
         marginTop: 32,
         fontSize: 12,
-        color: "#555",
+        color: "#999",
         letterSpacing: 1,
         display: "flex",
         alignItems: "center",
@@ -200,7 +180,7 @@ export default function Home() {
       <div style={{
         position: "fixed",
         bottom: 20,
-        color: "#333",
+        color: "#777",
         fontSize: 11,
         letterSpacing: 2,
       }}>

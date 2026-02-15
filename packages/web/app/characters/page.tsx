@@ -118,7 +118,7 @@ export default function CharactersPage() {
         <Link
           href="/"
           style={{
-            color: "#555",
+            color: "#999",
             fontSize: 11,
             letterSpacing: 3,
             textDecoration: "none",
@@ -129,7 +129,7 @@ export default function CharactersPage() {
         </Link>
         <span
           style={{
-            color: "#444",
+            color: "#888",
             fontSize: 13,
             letterSpacing: 4,
             textTransform: "uppercase",
@@ -166,7 +166,7 @@ export default function CharactersPage() {
               style={{
                 fontSize: 10,
                 letterSpacing: 4,
-                color: "#555",
+                color: "#999",
                 marginBottom: 8,
                 textTransform: "uppercase",
               }}
@@ -202,14 +202,14 @@ export default function CharactersPage() {
             </div>
 
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 9, letterSpacing: 3, color: "#444", marginBottom: 6, textTransform: "uppercase" }}>
+              <div style={{ fontSize: 9, letterSpacing: 3, color: "#888", marginBottom: 6, textTransform: "uppercase" }}>
                 Difficulty
               </div>
               <div style={{ fontSize: 16, letterSpacing: 4 }}>{selected.difficulty}</div>
             </div>
 
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 9, letterSpacing: 3, color: "#444", marginBottom: 8, textTransform: "uppercase" }}>
+              <div style={{ fontSize: 9, letterSpacing: 3, color: "#888", marginBottom: 8, textTransform: "uppercase" }}>
                 Traits
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
@@ -364,7 +364,7 @@ export default function CharactersPage() {
                       marginTop: 8,
                       fontSize: 11,
                       letterSpacing: 3,
-                      color: isSelected ? char.glow : "#555",
+                      color: isSelected ? char.glow : "#999",
                       textTransform: "uppercase",
                       fontWeight: isSelected ? 700 : 400,
                       transition: "color 0.4s",
@@ -386,8 +386,8 @@ export default function CharactersPage() {
               top: "50%",
               transform: "translateY(-50%)",
               background: "none",
-              border: "1px solid #333",
-              color: "#666",
+              border: "1px solid #555",
+              color: "#aaa",
               fontSize: 24,
               width: 44,
               height: 44,
@@ -403,8 +403,8 @@ export default function CharactersPage() {
               e.currentTarget.style.color = selected.glow;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "#333";
-              e.currentTarget.style.color = "#666";
+              e.currentTarget.style.borderColor = "#777";
+              e.currentTarget.style.color = "#aaa";
             }}
           >
             &#8249;
@@ -418,8 +418,8 @@ export default function CharactersPage() {
               top: "50%",
               transform: "translateY(-50%)",
               background: "none",
-              border: "1px solid #333",
-              color: "#666",
+              border: "1px solid #555",
+              color: "#aaa",
               fontSize: 24,
               width: 44,
               height: 44,
@@ -435,8 +435,8 @@ export default function CharactersPage() {
               e.currentTarget.style.color = selected.glow;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "#333";
-              e.currentTarget.style.color = "#666";
+              e.currentTarget.style.borderColor = "#777";
+              e.currentTarget.style.color = "#aaa";
             }}
           >
             &#8250;
@@ -449,7 +449,7 @@ export default function CharactersPage() {
               left: "50%",
               transform: "translateX(-50%)",
               fontSize: 10,
-              color: "#333",
+              color: "#777",
               letterSpacing: 3,
               textTransform: "uppercase",
             }}
@@ -468,7 +468,7 @@ export default function CharactersPage() {
             borderLeft: "1px solid #1a1a2e",
           }}
         >
-          <div style={{ fontSize: 10, letterSpacing: 4, color: "#555", marginBottom: 16, textTransform: "uppercase" }}>
+          <div style={{ fontSize: 10, letterSpacing: 4, color: "#999", marginBottom: 16, textTransform: "uppercase" }}>
             Roster
           </div>
 
@@ -476,7 +476,7 @@ export default function CharactersPage() {
             <span style={{ color: selected.glow, transition: "color 0.4s" }}>
               {String(selectedIndex + 1).padStart(2, "0")}
             </span>
-            <span style={{ color: "#333", fontSize: 24 }}>/{String(characters.length).padStart(2, "0")}</span>
+            <span style={{ color: "#777", fontSize: 24 }}>/{String(characters.length).padStart(2, "0")}</span>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 24 }}>
@@ -504,7 +504,7 @@ export default function CharactersPage() {
                       width: 8,
                       height: 8,
                       borderRadius: "50%",
-                      backgroundColor: isActive ? char.glow : "#333",
+                      backgroundColor: isActive ? char.glow : "#777",
                       transition: "background-color 0.3s",
                       flexShrink: 0,
                     }}
@@ -513,7 +513,7 @@ export default function CharactersPage() {
                     style={{
                       fontSize: 13,
                       fontWeight: isActive ? 700 : 400,
-                      color: isActive ? char.glow : "#666",
+                      color: isActive ? char.glow : "#aaa",
                       letterSpacing: 2,
                       textTransform: "uppercase",
                       transition: "color 0.3s",
@@ -550,7 +550,7 @@ export default function CharactersPage() {
             Select Fighter
           </button>
 
-          <div style={{ marginTop: 12, fontSize: 10, color: "#444", letterSpacing: 1, textAlign: "center" }}>
+          <div style={{ marginTop: 12, fontSize: 10, color: "#888", letterSpacing: 1, textAlign: "center" }}>
             All fighters have equal stats — cosmetic only
           </div>
         </div>

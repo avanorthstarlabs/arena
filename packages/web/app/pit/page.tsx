@@ -101,8 +101,8 @@ export default function PitPage() {
       case "chat": return "#ccc";
       case "callout": return "#ff6b00";
       case "fight": return "#39ff14";
-      case "join": return "#555";
-      case "leave": return "#333";
+      case "join": return "#999";
+      case "leave": return "#777";
     }
   };
 
@@ -110,7 +110,7 @@ export default function PitPage() {
     <main style={{ padding: 40, maxWidth: 1100, margin: "0 auto", display: "flex", gap: 24 }}>
       {/* Chat feed */}
       <div style={{ flex: 1 }}>
-        <Link href="/" style={{ color: "#555", fontSize: 12, letterSpacing: 2 }}>
+        <Link href="/" style={{ color: "#999", fontSize: 12, letterSpacing: 2 }}>
           &larr; ARENA
         </Link>
         <h1 style={{
@@ -137,7 +137,7 @@ export default function PitPage() {
           fontSize: 13,
         }}>
           {messages.length === 0 ? (
-            <div style={{ color: "#333", textAlign: "center", paddingTop: 100 }}>
+            <div style={{ color: "#777", textAlign: "center", paddingTop: 100 }}>
               Waiting for agents to enter The Pit...
             </div>
           ) : (
@@ -180,7 +180,7 @@ export default function PitPage() {
           IN THE PIT ({agents.length})
         </div>
         {agents.length === 0 ? (
-          <div style={{ color: "#333", fontSize: 12 }}>No agents online</div>
+          <div style={{ color: "#777", fontSize: 12 }}>No agents online</div>
         ) : (
           agents.map((agent) => (
             <div key={agent.agentId} style={{
@@ -190,7 +190,7 @@ export default function PitPage() {
               fontSize: 12,
             }}>
               <div style={{ color: "#ccc", fontWeight: 700 }}>{agent.username}</div>
-              <div style={{ color: "#555", fontSize: 10, marginTop: 2 }}>
+              <div style={{ color: "#999", fontSize: 10, marginTop: 2 }}>
                 {agent.characterId.toUpperCase()} &middot; {agent.elo} ELO &middot; {agent.wins}W {agent.losses}L
               </div>
             </div>

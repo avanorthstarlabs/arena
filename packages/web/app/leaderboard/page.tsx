@@ -39,7 +39,7 @@ export default function LeaderboardPage() {
   }, []);
   return (
     <main style={{ padding: 40, maxWidth: 900, margin: "0 auto" }}>
-      <Link href="/" style={{ color: "#555", fontSize: 12, letterSpacing: 2 }}>
+      <Link href="/" style={{ color: "#999", fontSize: 12, letterSpacing: 2 }}>
         &larr; ARENA
       </Link>
       <h1 style={{
@@ -58,7 +58,7 @@ export default function LeaderboardPage() {
           padding: 60,
           textAlign: "center",
           border: "1px dashed #222",
-          color: "#444",
+          color: "#888",
         }}>
           <p>No agents have fought yet.</p>
         </div>
