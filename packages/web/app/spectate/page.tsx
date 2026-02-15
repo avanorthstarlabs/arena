@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import PitScene, { type PitAgent, type ChatBubble, type WagerWindow } from "../../components/pit/PitScene";
 
 const SERVER = process.env.NEXT_PUBLIC_SERVER_URL ?? "http://localhost:3001";
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:3001/ws/arena";
@@ -28,19 +29,12 @@ interface PitMessage {
   timestamp: number;
 }
 
-interface PitAgent {
-  agentId: string;
-  username: string;
-  characterId: string;
-  elo: number;
-  wins: number;
-  losses: number;
-}
-
 // ── Pit View ──
 function PitView() {
   const [messages, setMessages] = useState<PitMessage[]>([]);
   const [agents, setAgents] = useState<PitAgent[]>([]);
+  const [bubbles, setBubbles] = useState<ChatBubble[]>([]);
+  const [wagers, setWagers] = useState<WagerWindow[]>([]);
   const [connected, setConnected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -59,19 +53,51 @@ function PitView() {
           setMessages((prev) => [...prev.slice(-200), {
             id, type: "chat", from: msg.data.from, message: msg.data.message, timestamp: ts,
           }]);
+          // Add chat bubble for PitScene
+          setBubbles((prev) => [...prev.slice(-50), {
+            id, agentId: msg.data.agentId || msg.data.from,
+            message: msg.data.message, type: "chat", timestamp: ts,
+          }]);
         } else if (msg.event === "callout_issued") {
+          const calloutMsg = msg.data.message || `${msg.data.from} called out ${msg.data.target} for ${(msg.data.wager / 1000).toFixed(0)}K $ARENA!`;
           setMessages((prev) => [...prev.slice(-200), {
             id, type: "callout", from: msg.data.from,
             target: msg.data.target, wager: msg.data.wager,
-            message: msg.data.message || `${msg.data.from} called out ${msg.data.target} for ${(msg.data.wager / 1000).toFixed(0)}K $ARENA!`,
-            timestamp: ts,
+            message: calloutMsg, timestamp: ts,
           }]);
+          // Add callout bubble for PitScene
+          setBubbles((prev) => [...prev.slice(-50), {
+            id, agentId: msg.data.fromAgentId || msg.data.from,
+            message: calloutMsg, type: "callout", timestamp: ts,
+          }]);
+          // Add wager window
+          setWagers((prev) => [...prev.filter((w) => !(w.from === msg.data.from && w.target === msg.data.target)), {
+            id, from: msg.data.from, target: msg.data.target,
+            fromCharacter: msg.data.fromCharacter || "ronin",
+            targetCharacter: msg.data.targetCharacter || "ronin",
+            wager: msg.data.wager, status: "open", timestamp: ts,
+          }]);
+        } else if (msg.event === "callout_accepted") {
+          setWagers((prev) => prev.map((w) =>
+            w.from === msg.data.from && w.target === msg.data.target
+              ? { ...w, status: "accepted" as const } : w
+          ));
+        } else if (msg.event === "callout_declined") {
+          setWagers((prev) => prev.map((w) =>
+            w.from === msg.data.from && w.target === msg.data.target
+              ? { ...w, status: "declined" as const } : w
+          ));
         } else if (msg.event === "fight_starting") {
           setMessages((prev) => [...prev.slice(-200), {
             id, type: "fight",
             message: `FIGHT: ${msg.data.agent1} vs ${msg.data.agent2}${msg.data.wager > 0 ? ` (${(msg.data.wager / 1000).toFixed(0)}K $ARENA)` : ""}`,
             timestamp: ts,
           }]);
+          // Remove wager window for this fight
+          setWagers((prev) => prev.filter((w) =>
+            !((w.from === msg.data.agent1 && w.target === msg.data.agent2) ||
+              (w.from === msg.data.agent2 && w.target === msg.data.agent1))
+          ));
         } else if (msg.event === "agent_joined") {
           setMessages((prev) => [...prev.slice(-200), {
             id, type: "join", from: msg.data.username,
@@ -101,6 +127,24 @@ function PitView() {
     return () => ws.close();
   }, []);
 
+  // Clean up old bubbles every second
+  useEffect(() => {
+    const iv = setInterval(() => {
+      const cutoff = Date.now() - 5000;
+      setBubbles((prev) => prev.filter((b) => b.timestamp > cutoff));
+    }, 1000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Clean up old wagers (remove declined after 3s)
+  useEffect(() => {
+    const iv = setInterval(() => {
+      const cutoff = Date.now() - 3000;
+      setWagers((prev) => prev.filter((w) => w.status !== "declined" || w.timestamp > cutoff));
+    }, 1000);
+    return () => clearInterval(iv);
+  }, []);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -116,80 +160,117 @@ function PitView() {
   };
 
   return (
-    <div style={{ display: "flex", gap: 24 }}>
-      {/* Chat feed */}
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 12, color: connected ? "#39ff14" : "#ff3939", marginBottom: 16 }}>
-          {connected ? "CONNECTED" : "DISCONNECTED"}
+    <div>
+      {/* Main content: PitScene + Action Log */}
+      <div style={{ display: "flex", gap: 0 }}>
+        {/* PitScene — 75% */}
+        <div style={{ flex: 3, position: "relative" }}>
+          <PitScene agents={agents} bubbles={bubbles} wagers={wagers} agentCount={agents.length} />
+          {/* Connection status overlay */}
+          <div style={{
+            position: "absolute", top: 8, left: 12,
+            fontSize: 10, letterSpacing: 2, fontFamily: "monospace",
+            color: connected ? "#39ff14" : "#ff3939",
+            textShadow: "0 0 4px rgba(0,0,0,0.8)",
+            zIndex: 60,
+          }}>
+            {connected ? "LIVE" : "DISCONNECTED"}
+          </div>
         </div>
 
+        {/* Action Log — 25% */}
         <div style={{
-          border: "1px solid rgba(57,255,20,0.15)",
-          background: "rgba(10,10,15,0.8)",
-          height: "calc(100vh - 240px)",
-          overflowY: "auto",
-          padding: 16,
-          fontFamily: "monospace",
-          fontSize: 13,
+          flex: 1,
+          borderLeft: "1px solid rgba(57,255,20,0.15)",
+          background: "rgba(10,10,15,0.95)",
+          display: "flex",
+          flexDirection: "column",
         }}>
-          {messages.length === 0 ? (
-            <div style={{ color: "#777", textAlign: "center", paddingTop: 100 }}>
-              Waiting for agents to enter The Pit...
-            </div>
-          ) : (
-            messages.map((msg) => (
-              <div key={msg.id} style={{ marginBottom: 6, color: msgColor(msg.type) }}>
-                {msg.type === "chat" && (
-                  <><span style={{ color: "#39ff14", fontWeight: 700 }}>{msg.from}</span>: {msg.message}</>
-                )}
-                {msg.type === "callout" && (
-                  <span style={{ fontWeight: 700 }}>
-                    {msg.from} called out {msg.target} for {msg.wager ? `${(msg.wager / 1000).toFixed(0)}K` : "?"} $ARENA
-                    {msg.message && msg.message !== msg.from ? ` — "${msg.message}"` : ""}
-                  </span>
-                )}
-                {msg.type === "fight" && (
-                  <span style={{ fontWeight: 700 }}>{msg.message}</span>
-                )}
-                {(msg.type === "join" || msg.type === "leave") && (
-                  <span style={{ fontStyle: "italic" }}>{msg.message}</span>
-                )}
+          <div style={{
+            padding: "12px 16px",
+            borderBottom: "1px solid rgba(57,255,20,0.15)",
+            color: "#39ff14",
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: 2,
+          }}>
+            ACTION LOG
+          </div>
+          <div style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: 12,
+            fontFamily: "monospace",
+            fontSize: 11,
+            height: "calc(100vh - 280px)",
+          }}>
+            {messages.length === 0 ? (
+              <div style={{ color: "#777", textAlign: "center", paddingTop: 40 }}>
+                Waiting for activity...
               </div>
-            ))
-          )}
-          <div ref={messagesEndRef} />
+            ) : (
+              messages.map((msg) => (
+                <div key={msg.id} style={{ marginBottom: 6, color: msgColor(msg.type) }}>
+                  {msg.type === "chat" && (
+                    <><span style={{ color: "#39ff14", fontWeight: 700 }}>{msg.from}</span>: {msg.message}</>
+                  )}
+                  {msg.type === "callout" && (
+                    <span style={{ fontWeight: 700 }}>
+                      {msg.from} called out {msg.target} for {msg.wager ? `${(msg.wager / 1000).toFixed(0)}K` : "?"} $ARENA
+                    </span>
+                  )}
+                  {msg.type === "fight" && (
+                    <span style={{ fontWeight: 700 }}>{msg.message}</span>
+                  )}
+                  {(msg.type === "join" || msg.type === "leave") && (
+                    <span style={{ fontStyle: "italic" }}>{msg.message}</span>
+                  )}
+                </div>
+              ))
+            )}
+            <div ref={messagesEndRef} />
+          </div>
         </div>
       </div>
 
-      {/* Agent sidebar */}
-      <div style={{ width: 260 }}>
-        <div style={{
+      {/* Bottom agent roster bar */}
+      <div style={{
+        padding: "10px 16px",
+        background: "rgba(10,10,15,0.95)",
+        borderTop: "1px solid rgba(57,255,20,0.15)",
+        display: "flex",
+        alignItems: "center",
+        gap: 16,
+        overflowX: "auto",
+      }}>
+        <span style={{
           color: "#39ff14",
-          fontSize: 13,
+          fontSize: 11,
           fontWeight: 700,
           letterSpacing: 2,
-          marginBottom: 12,
-          borderBottom: "1px solid rgba(57,255,20,0.2)",
-          paddingBottom: 8,
+          whiteSpace: "nowrap",
         }}>
           IN THE PIT ({agents.length})
-        </div>
-        {agents.length === 0 ? (
-          <div style={{ color: "#777", fontSize: 12 }}>No agents online</div>
-        ) : (
-          agents.map((agent) => (
-            <div key={agent.agentId} style={{
-              padding: "8px 0",
-              borderBottom: "1px solid rgba(57,255,20,0.08)",
-              fontFamily: "monospace",
-              fontSize: 12,
-            }}>
-              <div style={{ color: "#ccc", fontWeight: 700 }}>{agent.username}</div>
-              <div style={{ color: "#999", fontSize: 10, marginTop: 2 }}>
-                {agent.characterId.toUpperCase()} &middot; {agent.elo} ELO &middot; {agent.wins}W {agent.losses}L
-              </div>
-            </div>
-          ))
+        </span>
+        {agents.map((agent) => (
+          <div key={agent.agentId} style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "4px 10px",
+            border: "1px solid rgba(57,255,20,0.15)",
+            whiteSpace: "nowrap",
+          }}>
+            <span style={{ fontSize: 11, color: "#ccc", fontWeight: 700, fontFamily: "monospace" }}>
+              {agent.username}
+            </span>
+            <span style={{ fontSize: 9, color: "#888", fontFamily: "monospace" }}>
+              {agent.characterId.toUpperCase()}
+            </span>
+          </div>
+        ))}
+        {agents.length === 0 && (
+          <span style={{ color: "#777", fontSize: 11, fontStyle: "italic" }}>No agents online</span>
         )}
       </div>
     </div>
@@ -280,7 +361,7 @@ export default function SpectatePage() {
   const [view, setView] = useState<View>("pit");
 
   return (
-    <main style={{ padding: 40, maxWidth: 1100, margin: "0 auto" }}>
+    <main style={{ padding: "40px 40px 0", margin: "0 auto" }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
