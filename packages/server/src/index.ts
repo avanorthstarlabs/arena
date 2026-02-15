@@ -1,32 +1,24 @@
 import express from "express";
 import cors from "cors";
 import { createServer } from "http";
-import { createRouter } from "./api/routes.js";
+import { config } from "./config.js";
 import { setupWebSocket } from "./api/ws.js";
-import { Lobby } from "./state/lobby.js";
+import { createRouter } from "./api/routes.js";
 
-const PORT = parseInt(process.env.PORT ?? "3001");
 const app = express();
 const server = createServer(app);
 
-app.use(cors({ origin: ["http://localhost:3000", "http://localhost:3001", "http://localhost:3003"] }));
+app.use(cors({ origin: config.corsOrigins }));
 app.use(express.json());
 
-const lobby = new Lobby();
-const router = createRouter(lobby);
+const { pit, fightManager, broadcastToFight } = setupWebSocket(server);
+const router = createRouter({ pit, fightManager });
 app.use("/api/v1", router);
-
-const { broadcast, broadcastToFight } = setupWebSocket(server, lobby);
-
-// Wire up the fight update callback to broadcast to spectators
-lobby.onFightUpdate = (fightId: string, state: any) => {
-  broadcastToFight(fightId, 'fight_update', state);
-};
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
-server.listen(PORT, () => {
-  console.log(`Arena server running on port ${PORT}`);
+server.listen(config.port, () => {
+  console.log(`Arena server running on port ${config.port}`);
 });
 
-export { app, lobby };
+export { app };

@@ -1,163 +1,113 @@
 import { Router, type Request, type Response } from "express";
-import { z } from "zod";
-import { ACTIONS } from "../combat/actions.js";
-import type { Lobby } from "../state/lobby.js";
+import { prisma } from "../db/client.js";
+import type { Pit } from "../state/pit.js";
+import type { FightManager } from "../state/fight-manager.js";
 
-const RegisterSchema = z.object({
-  agent_id: z.string().min(1).max(64),
-  skills_md: z.string().min(1).max(4000),
-  wallet_address: z.string().min(1),
-  character_preference: z.string().optional(),
-});
+interface RouterDeps {
+  pit: Pit;
+  fightManager: FightManager;
+}
 
-const ChallengeSchema = z.object({
-  agent_id: z.string(),
-  target_agent_id: z.string(),
-  wager_amount: z.number().positive(),
-});
-
-const AcceptSchema = z.object({
-  agent_id: z.string(),
-  challenge_id: z.string(),
-});
-
-const ActionSchema = z.object({
-  agent_id: z.string(),
-  fight_id: z.string(),
-  action: z.enum(ACTIONS),
-});
-
-export function createRouter(lobby: Lobby): Router {
+export function createRouter({ pit, fightManager }: RouterDeps): Router {
   const router = Router();
 
-  router.post("/arena/register", (req: Request, res: Response) => {
+  // --- Leaderboard (DB-backed, sorted by elo) ---
+  router.get("/arena/leaderboard", async (_req: Request, res: Response) => {
     try {
-      const body = RegisterSchema.parse(req.body);
-      const agent = lobby.registerAgent(body.agent_id, body.skills_md, body.wallet_address, body.character_preference ?? "default");
+      const agents = await prisma.agent.findMany({
+        select: { id: true, username: true, characterId: true, elo: true, wins: true, losses: true },
+        orderBy: { elo: "desc" },
+        take: 100,
+      });
+      res.json({ ok: true, leaderboard: agents });
+    } catch (e: any) {
+      res.status(500).json({ ok: false, error: e.message });
+    }
+  });
+
+  // --- List agents currently in The Pit ---
+  router.get("/arena/agents", (_req: Request, res: Response) => {
+    res.json({ ok: true, agents: pit.getAgentsList() });
+  });
+
+  // --- Active fights ---
+  router.get("/arena/fights", (_req: Request, res: Response) => {
+    const fights: Array<{ fightId: string; agent1: string; agent2: string; wager: number }> = [];
+    for (const [fightId, active] of fightManager.activeFights) {
+      const a1 = pit.agents.get(active.agent1Id);
+      const a2 = pit.agents.get(active.agent2Id);
+      fights.push({
+        fightId,
+        agent1: a1?.username ?? active.agent1Id,
+        agent2: a2?.username ?? active.agent2Id,
+        wager: active.wager,
+      });
+    }
+    res.json({ ok: true, fights });
+  });
+
+  // --- Single fight state ---
+  router.get("/arena/fight/:fightId", (req: Request, res: Response) => {
+    const state = fightManager.getFightState(req.params.fightId);
+    if (!state) return res.status(404).json({ ok: false, error: "Fight not found" });
+    res.json({ ok: true, state });
+  });
+
+  // --- Stats ---
+  router.get("/arena/stats", async (_req: Request, res: Response) => {
+    try {
+      const [totalFights, totalAgents] = await Promise.all([
+        prisma.fight.count(),
+        prisma.agent.count(),
+      ]);
+      res.json({
+        ok: true,
+        stats: {
+          totalFights,
+          totalAgents,
+          activeFights: fightManager.activeFights.size,
+          pitAgents: pit.agents.size,
+        },
+      });
+    } catch (e: any) {
+      res.status(500).json({ ok: false, error: e.message });
+    }
+  });
+
+  // --- Agent profile by username ---
+  router.get("/arena/agent/:username", async (req: Request, res: Response) => {
+    try {
+      const agent = await prisma.agent.findUnique({
+        where: { username: req.params.username },
+        select: { id: true, username: true, characterId: true, elo: true, wins: true, losses: true, createdAt: true },
+      });
+      if (!agent) return res.status(404).json({ ok: false, error: "Agent not found" });
       res.json({ ok: true, agent });
     } catch (e: any) {
-      res.status(400).json({ ok: false, error: e.message });
+      res.status(500).json({ ok: false, error: e.message });
     }
   });
 
-  router.post("/arena/challenge", (req: Request, res: Response) => {
+  // --- Recent fights (for spectator view) ---
+  router.get("/arena/recent-fights", async (_req: Request, res: Response) => {
     try {
-      const body = ChallengeSchema.parse(req.body);
-      const challenge = lobby.createChallenge(body.agent_id, body.target_agent_id, body.wager_amount);
-      res.json({ ok: true, challenge });
+      const fights = await prisma.fight.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 20,
+        select: {
+          id: true,
+          status: true,
+          wagerAmount: true,
+          createdAt: true,
+          completedAt: true,
+          agent1: { select: { username: true, characterId: true } },
+          agent2: { select: { username: true, characterId: true } },
+          winner: { select: { username: true } },
+        },
+      });
+      res.json({ ok: true, fights });
     } catch (e: any) {
-      res.status(400).json({ ok: false, error: e.message });
-    }
-  });
-
-  router.post("/arena/accept", (req: Request, res: Response) => {
-    try {
-      const body = AcceptSchema.parse(req.body);
-      const fight = lobby.acceptChallenge(body.challenge_id, body.agent_id);
-      res.json({ ok: true, fight_id: fight.getState().fightId, state: fight.getState() });
-    } catch (e: any) {
-      res.status(400).json({ ok: false, error: e.message });
-    }
-  });
-
-  router.post("/arena/action", (req: Request, res: Response) => {
-    try {
-      const body = ActionSchema.parse(req.body);
-      const result = lobby.submitAction(body.fight_id, body.agent_id, body.action);
-      const fight = lobby.getFight(body.fight_id)!;
-      const state = fight.getState();
-
-      // Auto-resolve side bets when fight ends
-      let resolution = undefined;
-      if (state.status === "fight_over") {
-        try { resolution = lobby.resolveSideBets(body.fight_id); } catch {}
-      }
-
-      res.json({ ok: true, result, state, resolution });
-    } catch (e: any) {
-      res.status(400).json({ ok: false, error: e.message });
-    }
-  });
-
-  router.post("/arena/next-round", (req: Request, res: Response) => {
-    try {
-      const { fight_id } = req.body;
-      const fight = lobby.getFight(fight_id);
-      if (!fight) return res.status(404).json({ ok: false, error: "Fight not found" });
-      fight.nextRound();
-      res.json({ ok: true, state: fight.getState() });
-    } catch (e: any) {
-      res.status(400).json({ ok: false, error: e.message });
-    }
-  });
-
-  router.get("/arena/fights", (_req: Request, res: Response) => {
-    res.json({ ok: true, fights: lobby.getActiveFights() });
-  });
-
-  router.get("/arena/fight/:fightId", (req: Request, res: Response) => {
-    const fight = lobby.getFight(req.params.fightId);
-    if (!fight) return res.status(404).json({ ok: false, error: "Fight not found" });
-    res.json({ ok: true, state: fight.getState() });
-  });
-
-  router.get("/arena/agents", (_req: Request, res: Response) => {
-    res.json({ ok: true, agents: Array.from(lobby.agents.values()) });
-  });
-
-  router.get("/arena/stats", (_req: Request, res: Response) => {
-    res.json({
-      ok: true,
-      stats: {
-        totalFights: lobby.fights.size,
-        totalAgents: lobby.agents.size,
-        totalWagered: 0,
-      },
-    });
-  });
-
-  router.get("/arena/leaderboard", (_req: Request, res: Response) => {
-    const agents = Array.from(lobby.agents.values()).map((agent) => ({
-      id: agent.id,
-      wins: agent.wins,
-      losses: agent.losses,
-      character: agent.characterId,
-    }));
-    agents.sort((a, b) => b.wins - a.wins);
-    res.json({ ok: true, leaderboard: agents });
-  });
-
-  // --- Side Bets ---
-
-  const SideBetSchema = z.object({
-    fight_id: z.string(),
-    wallet_address: z.string().min(1),
-    backed_agent: z.string(),
-    amount: z.number().positive(),
-  });
-
-  router.post("/arena/side-bet", (req: Request, res: Response) => {
-    try {
-      const body = SideBetSchema.parse(req.body);
-      const bet = lobby.placeSideBet(body.fight_id, body.wallet_address, body.backed_agent, body.amount);
-      const { pool } = lobby.getSideBets(body.fight_id);
-      res.json({ ok: true, bet, pool });
-    } catch (e: any) {
-      res.status(400).json({ ok: false, error: e.message });
-    }
-  });
-
-  router.get("/arena/side-bets/:fightId", (req: Request, res: Response) => {
-    const { bets, pool } = lobby.getSideBets(req.params.fightId);
-    res.json({ ok: true, bets, pool });
-  });
-
-  router.post("/arena/resolve-bets/:fightId", (req: Request, res: Response) => {
-    try {
-      const result = lobby.resolveSideBets(req.params.fightId);
-      res.json({ ok: true, ...result });
-    } catch (e: any) {
-      res.status(400).json({ ok: false, error: e.message });
+      res.status(500).json({ ok: false, error: e.message });
     }
   });
 
