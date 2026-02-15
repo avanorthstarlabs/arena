@@ -5,7 +5,7 @@ export const config = {
     "http://localhost:3001",
   ],
   baseRpcUrl: process.env.BASE_RPC_URL ?? "https://mainnet.base.org",
-  northTokenAddress: process.env.NORTH_TOKEN_ADDRESS,
+  arenaTokenAddress: process.env.ARENA_TOKEN_ADDRESS,
   hotWalletKey: process.env.HOT_WALLET_PRIVATE_KEY,
   masterDepositAddress: process.env.MASTER_DEPOSIT_ADDRESS,
   nodeEnv: process.env.NODE_ENV ?? "development",

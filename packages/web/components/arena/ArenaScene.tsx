@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { FightHUD } from "./FightHUD";
 import type { FightState } from "./useGameState";
+import { soundEngine } from "./SoundEngine";
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -204,6 +205,11 @@ function shouldJump(action: string | undefined): boolean {
   );
 }
 
+function isHeavyAction(action: string): boolean {
+  const a = action.toLowerCase();
+  return a.includes("heavy") || a.includes("uppercut") || a.includes("sweep") || a.includes("grab");
+}
+
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
@@ -363,7 +369,7 @@ function FighterSprite({
   isLanding: boolean;
 }) {
   const [frame, setFrame] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setInterval>>();
+  const timerRef = useRef<ReturnType<typeof setInterval>>(null);
   const prevAnimRef = useRef(animState);
 
   useEffect(() => {
@@ -382,7 +388,7 @@ function FighterSprite({
       });
     }, 1000 / fps);
 
-    return () => clearInterval(timerRef.current);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [animState]);
 
   const sheetUrl = `/sprites/${characterId}-${animState}-sheet.png`;
@@ -818,6 +824,32 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
     }
   }, [arenaId]);
 
+  // ── Sound Engine Init ──────────────────────────────
+  const soundInitRef = useRef(false);
+
+  const initSound = useCallback(() => {
+    if (soundInitRef.current) return;
+    if (soundEngine.init()) {
+      soundInitRef.current = true;
+      // Start crowd ambient if fight is already running
+      if (gameState) soundEngine.playCrowdAmbient(true);
+    }
+  }, [gameState]);
+
+  // Start crowd ambient when game first loads (if sound already init)
+  const crowdStartedRef = useRef(false);
+  useEffect(() => {
+    if (gameState && soundInitRef.current && !crowdStartedRef.current) {
+      soundEngine.playCrowdAmbient(true);
+      crowdStartedRef.current = true;
+    }
+  }, [gameState]);
+
+  // Cleanup sound engine on unmount
+  useEffect(() => {
+    return () => soundEngine.cleanup();
+  }, []);
+
   const lastResult = gameState?.lastResult;
   const isP1Hurt = lastResult ? lastResult.p2Damage > 0 : false;
   const isP2Hurt = lastResult ? lastResult.p1Damage > 0 : false;
@@ -861,7 +893,7 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
   const [p2Pos, setP2Pos] = useState<FighterPos>(BASE_P2);
   const [p1Landing, setP1Landing] = useState(false);
   const [p2Landing, setP2Landing] = useState(false);
-  const animFrameRef = useRef<number>();
+  const animFrameRef = useRef<number>(null);
 
   // Jump velocity tracking (not in state — updated in rAF loop)
   const p1JumpVel = useRef(0);
@@ -1026,10 +1058,42 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
       setTimeout(() => setShakeClass(""), 350);
     }
 
-    // KO callout
+    // ── Combat Sounds ────────────────────────────────
+    if (soundInitRef.current && lastEntry) {
+      const p1Act = lastEntry.p1Action.toLowerCase();
+      const p2Act = lastEntry.p2Action.toLowerCase();
+      const p1Dmg = lastResult?.p1Damage ?? 0;
+      const p2Dmg = lastResult?.p2Damage ?? 0;
+
+      if (p2Dmg > 0) {
+        // P1 hit P2
+        if (isHeavyAction(p1Act)) soundEngine.playHitHeavy();
+        else soundEngine.playHitLight();
+      }
+      if (p1Dmg > 0) {
+        // P2 hit P1 — slight offset so both don't stack exactly
+        setTimeout(() => {
+          if (isHeavyAction(p2Act)) soundEngine.playHitHeavy();
+          else soundEngine.playHitLight();
+        }, 80);
+      }
+      // Block clang — blocker took no damage while opponent attacked
+      if (p1Act.includes("block") && p1Dmg === 0 && p2Dmg === 0) {
+        soundEngine.playBlock();
+      } else if (p2Act.includes("block") && p1Dmg === 0 && p2Dmg === 0) {
+        soundEngine.playBlock();
+      }
+      // Dodge whoosh — dodger evaded, no damage exchanged
+      if ((p1Act.includes("dodge") || p2Act.includes("dodge")) && p1Dmg === 0 && p2Dmg === 0) {
+        soundEngine.playDodge();
+      }
+    }
+
+    // KO callout + stinger
     if (isP1KO || isP2KO) {
       calloutKeyRef.current += 1;
       setCallout({ type: "ko", key: calloutKeyRef.current });
+      if (soundInitRef.current) soundEngine.playKO();
     }
   }, [gameState?.exchange]);
 
@@ -1041,24 +1105,51 @@ export function ArenaScene({ gameState, arenaId }: ArenaSceneProps) {
       prevRoundRef.current = currentRound;
       calloutKeyRef.current += 1;
       setCallout({ type: "round", round: currentRound, key: calloutKeyRef.current });
+      if (soundInitRef.current) soundEngine.playRoundBell();
       // Follow up with FIGHT! after a delay
       setTimeout(() => {
         calloutKeyRef.current += 1;
         setCallout({ type: "fight", key: calloutKeyRef.current });
+        if (soundInitRef.current) soundEngine.playCrowdCheer();
       }, 1200);
     }
   }, [gameState?.p1.roundWins, gameState?.p2.roundWins, gameState?.exchange]);
+
+  // Victory fanfare when fight ends
+  const fightOverFiredRef = useRef(false);
+  useEffect(() => {
+    if (gameState?.status === "fight_over" && !fightOverFiredRef.current) {
+      fightOverFiredRef.current = true;
+      if (soundInitRef.current) {
+        setTimeout(() => soundEngine.playVictory(), 800);
+        setTimeout(() => soundEngine.playCrowdCheer(), 400);
+      }
+    }
+    if (gameState?.status !== "fight_over") {
+      fightOverFiredRef.current = false;
+    }
+  }, [gameState?.status]);
+
+  // Landing thud when fighters touch ground after a jump
+  useEffect(() => {
+    if (p1Landing && soundInitRef.current) soundEngine.playLandingThud();
+  }, [p1Landing]);
+  useEffect(() => {
+    if (p2Landing && soundInitRef.current) soundEngine.playLandingThud();
+  }, [p2Landing]);
 
   return (
     <div
       ref={sceneRef}
       className={shakeClass}
+      onClick={initSound}
       style={{
         width: "100%",
         height: "100vh",
         position: "relative",
         overflow: "hidden",
         background: arena.bgTint,
+        cursor: soundInitRef.current ? "default" : "pointer",
       }}
     >
       {/* Arena background panorama — depth-of-field blur for distant bg */}

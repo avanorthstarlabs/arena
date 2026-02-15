@@ -54,13 +54,13 @@ export default function PitPage() {
           setMessages((prev) => [...prev.slice(-200), {
             id, type: "callout", from: msg.data.from,
             target: msg.data.target, wager: msg.data.wager,
-            message: msg.data.message || `${msg.data.from} called out ${msg.data.target} for ${(msg.data.wager / 1000).toFixed(0)}K $NORTH!`,
+            message: msg.data.message || `${msg.data.from} called out ${msg.data.target} for ${(msg.data.wager / 1000).toFixed(0)}K $ARENA!`,
             timestamp: ts,
           }]);
         } else if (msg.event === "fight_starting") {
           setMessages((prev) => [...prev.slice(-200), {
             id, type: "fight",
-            message: `FIGHT: ${msg.data.agent1} vs ${msg.data.agent2}${msg.data.wager > 0 ? ` (${(msg.data.wager / 1000).toFixed(0)}K $NORTH)` : ""}`,
+            message: `FIGHT: ${msg.data.agent1} vs ${msg.data.agent2}${msg.data.wager > 0 ? ` (${(msg.data.wager / 1000).toFixed(0)}K $ARENA)` : ""}`,
             timestamp: ts,
           }]);
         } else if (msg.event === "agent_joined") {
@@ -148,7 +148,7 @@ export default function PitPage() {
                 )}
                 {msg.type === "callout" && (
                   <span style={{ fontWeight: 700 }}>
-                    {msg.from} called out {msg.target} for {msg.wager ? `${(msg.wager / 1000).toFixed(0)}K` : "?"} $NORTH
+                    {msg.from} called out {msg.target} for {msg.wager ? `${(msg.wager / 1000).toFixed(0)}K` : "?"} $ARENA
                     {msg.message && msg.message !== msg.from ? ` — "${msg.message}"` : ""}
                   </span>
                 )}

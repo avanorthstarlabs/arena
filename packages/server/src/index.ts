@@ -28,7 +28,7 @@ server.listen(config.port, () => {
   console.log(`Arena server running on port ${config.port}`);
 
   // Start deposit watcher if configured
-  if (config.northTokenAddress && config.masterDepositAddress) {
+  if (config.arenaTokenAddress && config.masterDepositAddress) {
     startDepositWatcher();
     console.log("Deposit watcher started");
   }

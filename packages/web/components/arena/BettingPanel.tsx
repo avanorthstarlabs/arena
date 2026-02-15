@@ -110,7 +110,7 @@ export function BettingPanel({ state }: { state: FightState }) {
           fontSize: 10,
           padding: "0 8px",
         }}>
-          $NORTH
+          $ARENA
         </div>
         <div style={{ textAlign: "center", flex: 1 }}>
           <div style={{ color: "#ff3939", fontSize: 11, marginBottom: 2 }}>{state.p2.agentId}</div>
@@ -242,7 +242,7 @@ export function BettingPanel({ state }: { state: FightState }) {
               opacity: placing ? 0.5 : 1,
             }}
           >
-            {placing ? "PLACING..." : selectedAgent ? `BET ${Number(amount) >= 1000 ? `${Number(amount)/1000}K` : amount} $NORTH ON ${selectedAgent.toUpperCase()}` : "SELECT A FIGHTER"}
+            {placing ? "PLACING..." : selectedAgent ? `BET ${Number(amount) >= 1000 ? `${Number(amount)/1000}K` : amount} $ARENA ON ${selectedAgent.toUpperCase()}` : "SELECT A FIGHTER"}
           </button>
 
           {/* Message */}

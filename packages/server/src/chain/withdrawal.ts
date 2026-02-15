@@ -24,7 +24,7 @@ export async function processWithdrawal(
     throw new Error("HOT_WALLET_PRIVATE_KEY not configured");
   }
 
-  if (!config.northTokenAddress) {
+  if (!config.arenaTokenAddress) {
     throw new Error("NORTH_TOKEN_ADDRESS not configured");
   }
 
@@ -98,7 +98,7 @@ export async function processWithdrawal(
       // Send the transfer transaction
       txHash = await walletClient.writeContract({
         account,
-        address: config.northTokenAddress as `0x${string}`,
+        address: config.arenaTokenAddress as `0x${string}`,
         abi: erc20Abi,
         functionName: "transfer",
         args: [walletAddress as `0x${string}`, amountInWei],

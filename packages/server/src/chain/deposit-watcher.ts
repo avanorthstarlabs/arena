@@ -14,10 +14,10 @@ import { Decimal } from "@prisma/client/runtime/library.js";
 let watchUnsubscribe: (() => void) | null = null;
 
 /**
- * Start watching for deposit events on the NORTH token
+ * Start watching for deposit events on the ARENA token
  */
 export async function startDepositWatcher(): Promise<void> {
-  if (!config.northTokenAddress || !config.masterDepositAddress) {
+  if (!config.arenaTokenAddress || !config.masterDepositAddress) {
     console.error(
       "Missing NORTH_TOKEN_ADDRESS or MASTER_DEPOSIT_ADDRESS config"
     );
@@ -30,13 +30,13 @@ export async function startDepositWatcher(): Promise<void> {
   });
 
   console.log(
-    `[Deposit Watcher] Starting to watch ${config.northTokenAddress} for deposits to ${config.masterDepositAddress}`
+    `[Deposit Watcher] Starting to watch ${config.arenaTokenAddress} for deposits to ${config.masterDepositAddress}`
   );
 
   try {
     // Watch for Transfer events where 'to' is the master deposit address
     watchUnsubscribe = publicClient.watchContractEvent({
-      address: config.northTokenAddress as `0x${string}`,
+      address: config.arenaTokenAddress as `0x${string}`,
       abi: erc20Abi,
       eventName: "Transfer",
       onLogs: async (logs) => {
