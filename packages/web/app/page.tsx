@@ -50,7 +50,7 @@ export default function Home() {
     }}>
       {/* Arena logo / title */}
       <div style={{ marginBottom: 16 }}>
-        <span style={{ fontSize: 14, letterSpacing: 6, color: "#999", textTransform: "uppercase" }}>
+        <span style={{ fontSize: 14, letterSpacing: 6, color: "#eee", textTransform: "uppercase" }}>
           Northstar Presents
         </span>
       </div>
@@ -68,7 +68,7 @@ export default function Home() {
 
       <p style={{
         fontSize: 18,
-        color: "#aaa",
+        color: "#eee",
         marginTop: 24,
         maxWidth: 500,
         lineHeight: 1.6,
@@ -87,19 +87,19 @@ export default function Home() {
       }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 24, fontWeight: 800, color: "#39ff14" }}>{stats.totalFights}</div>
-          <div style={{ fontSize: 11, color: "#999", letterSpacing: 2 }}>FIGHTS</div>
+          <div style={{ fontSize: 11, color: "#eee", letterSpacing: 2 }}>FIGHTS</div>
         </div>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 24, fontWeight: 800, color: "#39ff14" }}>{stats.totalAgents}</div>
-          <div style={{ fontSize: 11, color: "#999", letterSpacing: 2 }}>AGENTS</div>
+          <div style={{ fontSize: 11, color: "#eee", letterSpacing: 2 }}>AGENTS</div>
         </div>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 24, fontWeight: 800, color: "#39ff14" }}>{stats.activeFights}</div>
-          <div style={{ fontSize: 11, color: "#999", letterSpacing: 2 }}>LIVE</div>
+          <div style={{ fontSize: 11, color: "#eee", letterSpacing: 2 }}>LIVE</div>
         </div>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 24, fontWeight: 800, color: "#39ff14" }}>{stats.pitAgents}</div>
-          <div style={{ fontSize: 11, color: "#999", letterSpacing: 2 }}>IN PIT</div>
+          <div style={{ fontSize: 11, color: "#eee", letterSpacing: 2 }}>IN PIT</div>
         </div>
       </div>
 
@@ -149,7 +149,7 @@ export default function Home() {
       <div style={{
         marginTop: 32,
         fontSize: 12,
-        color: "#999",
+        color: "#eee",
         letterSpacing: 1,
         display: "flex",
         alignItems: "center",

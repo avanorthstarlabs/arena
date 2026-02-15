@@ -189,41 +189,50 @@ function PitView() {
       case "chat": return "#ccc";
       case "callout": return "#ff6b00";
       case "fight": return "#39ff14";
-      case "join": return "#999";
-      case "leave": return "#777";
+      case "join": return "#eee";
+      case "leave": return "#eee";
     }
   };
 
   return (
     <div>
-      {/* Main content: PitScene + Action Log */}
-      <div style={{ display: "flex", gap: 0 }}>
-        {/* PitScene — 75% */}
-        <div style={{ flex: 3, position: "relative" }}>
-          <PitScene agents={agents} bubbles={bubbles} wagers={wagers} agentCount={agents.length} />
-          {/* Connection status overlay */}
-          <div style={{
-            position: "absolute", top: 8, left: 12,
-            fontSize: 10, letterSpacing: 2, fontFamily: "monospace",
-            color: connected ? "#39ff14" : "#ff3939",
-            textShadow: "0 0 4px rgba(0,0,0,0.8)",
-            zIndex: 60,
-          }}>
-            {connected ? "LIVE" : "DISCONNECTED"}
-          </div>
+      {/* Main content: PitScene with overlaid Action Log */}
+      <div style={{ position: "relative" }}>
+        {/* PitScene — full width */}
+        <PitScene agents={agents} bubbles={bubbles} wagers={wagers} agentCount={agents.length} />
+
+        {/* Connection status overlay */}
+        <div style={{
+          position: "absolute", top: 8, left: 12,
+          fontSize: 10, letterSpacing: 2, fontFamily: "monospace",
+          color: connected ? "#39ff14" : "#ff3939",
+          textShadow: "0 0 4px rgba(0,0,0,0.8)",
+          zIndex: 60,
+        }}>
+          {connected ? "LIVE" : "DISCONNECTED"}
         </div>
 
-        {/* Action Log — 25% */}
+        {/* Action Log — glassmorphic overlay on right side */}
         <div style={{
-          flex: 1,
-          borderLeft: "1px solid rgba(57,255,20,0.15)",
-          background: "rgba(10,10,15,0.95)",
+          position: "absolute",
+          top: 12,
+          right: 12,
+          bottom: 12,
+          width: 280,
+          background: "rgba(57, 255, 20, 0.04)",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+          border: "1px solid rgba(57, 255, 20, 0.12)",
+          borderRadius: 8,
           display: "flex",
           flexDirection: "column",
+          zIndex: 50,
+          overflow: "hidden",
+          boxShadow: "0 0 20px rgba(0,0,0,0.3)",
         }}>
           <div style={{
-            padding: "12px 16px",
-            borderBottom: "1px solid rgba(57,255,20,0.15)",
+            padding: "10px 14px",
+            borderBottom: "1px solid rgba(57,255,20,0.1)",
             color: "#39ff14",
             fontSize: 11,
             fontWeight: 700,
@@ -234,13 +243,12 @@ function PitView() {
           <div style={{
             flex: 1,
             overflowY: "auto",
-            padding: 12,
+            padding: 10,
             fontFamily: "monospace",
             fontSize: 11,
-            height: "calc(100vh - 280px)",
           }}>
             {messages.length === 0 ? (
-              <div style={{ color: "#777", textAlign: "center", paddingTop: 40 }}>
+              <div style={{ color: "#eee", textAlign: "center", paddingTop: 40 }}>
                 Waiting for activity...
               </div>
             ) : (
@@ -299,13 +307,13 @@ function PitView() {
             <span style={{ fontSize: 11, color: "#ccc", fontWeight: 700, fontFamily: "monospace" }}>
               {agent.username}
             </span>
-            <span style={{ fontSize: 9, color: "#888", fontFamily: "monospace" }}>
+            <span style={{ fontSize: 9, color: "#eee", fontFamily: "monospace" }}>
               {agent.characterId.toUpperCase()}
             </span>
           </div>
         ))}
         {agents.length === 0 && (
-          <span style={{ color: "#777", fontSize: 11, fontStyle: "italic" }}>No agents online</span>
+          <span style={{ color: "#eee", fontSize: 11, fontStyle: "italic" }}>No agents online</span>
         )}
       </div>
     </div>
@@ -389,17 +397,17 @@ function FightsView() {
       {/* Left: Fight cards — 60% */}
       <div style={{ flex: 3, overflowY: "auto", paddingRight: 16 }}>
         {loading ? (
-          <p style={{ color: "#999", fontStyle: "italic" }}>Connecting to arena server...</p>
+          <p style={{ color: "#eee", fontStyle: "italic" }}>Connecting to arena server...</p>
         ) : fights.length === 0 ? (
           <div style={{
             padding: 60,
             textAlign: "center",
             border: "1px dashed #222",
-            color: "#888",
+            color: "#eee",
           }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>&#9876;</div>
             <p>No active fights. Agents are warming up in The Pit...</p>
-            <p style={{ fontSize: 12, color: "#777", marginTop: 8 }}>
+            <p style={{ fontSize: 12, color: "#eee", marginTop: 8 }}>
               Fights appear here automatically when agents challenge each other.
             </p>
           </div>
@@ -416,7 +424,7 @@ function FightsView() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div style={{ fontSize: 20, fontWeight: 700 }}>
                     <span style={{ color: "#3939ff" }}>{f.agents[0]}</span>
-                    <span style={{ color: "#999", margin: "0 12px", fontSize: 14 }}>VS</span>
+                    <span style={{ color: "#eee", margin: "0 12px", fontSize: 14 }}>VS</span>
                     <span style={{ color: "#ff3939" }}>{f.agents[1]}</span>
                   </div>
                   <div style={{
@@ -439,7 +447,7 @@ function FightsView() {
                   </div>
                 )}
                 {f.round && (
-                  <div style={{ color: "#999", fontSize: 12, marginTop: 8 }}>
+                  <div style={{ color: "#eee", fontSize: 12, marginTop: 8 }}>
                     Round {f.round} &middot; HP: {f.p1Hp ?? "?"} - {f.p2Hp ?? "?"}
                   </div>
                 )}
@@ -477,7 +485,7 @@ function FightsView() {
           fontSize: 12,
         }}>
           {spectatorMessages.length === 0 ? (
-            <div style={{ color: "#777", textAlign: "center", paddingTop: 40, fontSize: 11 }}>
+            <div style={{ color: "#eee", textAlign: "center", paddingTop: 40, fontSize: 11 }}>
               {isConnected ? "No messages yet. Say something!" : "Connect wallet to chat"}
             </div>
           ) : (
@@ -539,7 +547,7 @@ function FightsView() {
             padding: "16px 12px",
             borderTop: "1px solid rgba(57,255,20,0.15)",
             textAlign: "center",
-            color: "#888",
+            color: "#eee",
             fontSize: 11,
             fontFamily: "monospace",
           }}>

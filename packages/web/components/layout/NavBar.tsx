@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { href: "/leaderboard", label: "LEADERBOARD" },
   { href: "/characters", label: "CHARACTERS" },
   { href: "/docs", label: "API DOCS" },
+  { href: "/profile", label: "MY AGENTS" },
 ];
 
 function CopyTokenButton() {
@@ -51,7 +52,7 @@ function CopyTokenButton() {
         WebkitBackdropFilter: "blur(12px)",
         border: "1px solid rgba(57,255,20,0.2)",
         borderRadius: 20,
-        color: copied ? "#39ff14" : "#aaa",
+        color: copied ? "#39ff14" : "#eee",
         fontSize: 11,
         fontFamily: "monospace",
         cursor: "pointer",
@@ -61,7 +62,7 @@ function CopyTokenButton() {
     >
       <span style={{ color: "#39ff14", fontWeight: 700 }}>$ARENA</span>
       <span>{short}</span>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={copied ? "#39ff14" : "#888"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={copied ? "#39ff14" : "#eee"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         {copied ? (
           <path d="M20 6L9 17l-5-5" />
         ) : (
@@ -92,7 +93,7 @@ function TwitterIcon() {
         background: "rgba(255,255,255,0.05)",
         border: "1px solid rgba(255,255,255,0.1)",
         transition: "all 0.2s",
-        color: "#888",
+        color: "#eee",
       }}
     >
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -152,7 +153,7 @@ export default function NavBar() {
                 fontSize: 11,
                 fontWeight: 700,
                 letterSpacing: 1.5,
-                color: active ? "#0a0a0f" : "#888",
+                color: active ? "#0a0a0f" : "#eee",
                 background: active ? "#39ff14" : "transparent",
                 borderRadius: 4,
                 transition: "all 0.2s",

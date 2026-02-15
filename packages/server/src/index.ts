@@ -16,8 +16,8 @@ app.use(cors({ origin: config.corsOrigins }));
 app.use(express.json());
 app.use("/api/v1", generalLimiter);
 
-const { pit, fightManager, broadcastToFight } = setupWebSocket(server);
-const router = createRouter({ pit, fightManager });
+const { pit, fightManager, betManager, broadcastToFight } = setupWebSocket(server);
+const router = createRouter({ pit, fightManager, betManager });
 app.use("/api/v1", router);
 app.use("/api/v1", createChainRouter());
 app.use("/api/v1", createSkillsRouter());

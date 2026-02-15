@@ -101,10 +101,10 @@ export function BettingPanel({ state }: { state: FightState }) {
         <div style={{ textAlign: "center", flex: 1 }}>
           <div style={{ color: "#3939ff", fontSize: 11, marginBottom: 2 }}>{state.p1.agentId}</div>
           <div style={{ color: "#fff", fontSize: 16, fontWeight: 700 }}>{pool.p1 >= 1000 ? `${(pool.p1/1000).toFixed(0)}K` : pool.p1.toFixed(0)}</div>
-          <div style={{ color: "#555", fontSize: 10 }}>{p1Odds}x</div>
+          <div style={{ color: "#eee", fontSize: 10 }}>{p1Odds}x</div>
         </div>
         <div style={{
-          color: "#333",
+          color: "#eee",
           display: "flex",
           alignItems: "center",
           fontSize: 10,
@@ -115,12 +115,12 @@ export function BettingPanel({ state }: { state: FightState }) {
         <div style={{ textAlign: "center", flex: 1 }}>
           <div style={{ color: "#ff3939", fontSize: 11, marginBottom: 2 }}>{state.p2.agentId}</div>
           <div style={{ color: "#fff", fontSize: 16, fontWeight: 700 }}>{pool.p2 >= 1000 ? `${(pool.p2/1000).toFixed(0)}K` : pool.p2.toFixed(0)}</div>
-          <div style={{ color: "#555", fontSize: 10 }}>{p2Odds}x</div>
+          <div style={{ color: "#eee", fontSize: 10 }}>{p2Odds}x</div>
         </div>
       </div>
 
       {isFightOver ? (
-        <div style={{ color: "#555", textAlign: "center", padding: 8 }}>
+        <div style={{ color: "#eee", textAlign: "center", padding: 8 }}>
           FIGHT OVER — BETS CLOSED
         </div>
       ) : !isConnected ? (
@@ -158,7 +158,7 @@ export function BettingPanel({ state }: { state: FightState }) {
                 padding: "8px 0",
                 background: selectedAgent === state.p1.agentId ? "rgba(57, 57, 255, 0.3)" : "transparent",
                 border: `1px solid ${selectedAgent === state.p1.agentId ? "#3939ff" : "#333"}`,
-                color: selectedAgent === state.p1.agentId ? "#3939ff" : "#666",
+                color: selectedAgent === state.p1.agentId ? "#3939ff" : "#eee",
                 fontFamily: "monospace",
                 fontSize: 11,
                 cursor: "pointer",
@@ -174,7 +174,7 @@ export function BettingPanel({ state }: { state: FightState }) {
                 padding: "8px 0",
                 background: selectedAgent === state.p2.agentId ? "rgba(255, 57, 57, 0.3)" : "transparent",
                 border: `1px solid ${selectedAgent === state.p2.agentId ? "#ff3939" : "#333"}`,
-                color: selectedAgent === state.p2.agentId ? "#ff3939" : "#666",
+                color: selectedAgent === state.p2.agentId ? "#ff3939" : "#eee",
                 fontFamily: "monospace",
                 fontSize: 11,
                 cursor: "pointer",
@@ -213,7 +213,7 @@ export function BettingPanel({ state }: { state: FightState }) {
                   padding: "8px 6px",
                   background: amount === String(v) ? "rgba(57,255,20,0.15)" : "transparent",
                   border: "1px solid #333",
-                  color: "#888",
+                  color: "#eee",
                   fontFamily: "monospace",
                   fontSize: 10,
                   cursor: "pointer",
@@ -233,7 +233,7 @@ export function BettingPanel({ state }: { state: FightState }) {
               padding: "10px 0",
               background: selectedAgent ? "#39ff14" : "transparent",
               border: `1px solid ${selectedAgent ? "#39ff14" : "#333"}`,
-              color: selectedAgent ? "#0a0a0f" : "#555",
+              color: selectedAgent ? "#0a0a0f" : "#eee",
               fontFamily: "monospace",
               fontSize: 12,
               fontWeight: 700,
@@ -258,7 +258,7 @@ export function BettingPanel({ state }: { state: FightState }) {
           )}
 
           {/* Wallet address */}
-          <div style={{ color: "#333", fontSize: 9, textAlign: "center", marginTop: 8 }}>
+          <div style={{ color: "#eee", fontSize: 9, textAlign: "center", marginTop: 8 }}>
             {address?.slice(0, 6)}...{address?.slice(-4)} on Base
           </div>
         </>

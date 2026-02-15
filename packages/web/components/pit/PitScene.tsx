@@ -67,7 +67,7 @@ const PIT_CONFIG = {
 // Wider bounds — room for up to 50 agents
 const PIT_BOUNDS = {
   xMin: -1.4,
-  xMax: 1.4,
+  xMax: 1.0,
   yMin: 0.0,
   yMax: 0.85,
 };
@@ -478,18 +478,20 @@ function QueueOverlay({ queue }: { queue: PitQueueInfo }) {
   return (
     <div style={{
       position: "absolute",
-      top: 8,
-      right: 8,
-      zIndex: 60,
+      top: 30,
+      left: 8,
+      zIndex: 55,
       padding: "8px 12px",
-      background: "rgba(10,10,15,0.85)",
-      border: "1px solid rgba(57,255,20,0.2)",
+      background: "rgba(57,255,20,0.06)",
+      border: "1px solid rgba(57,255,20,0.15)",
       fontFamily: "monospace",
       fontSize: 10,
-      backdropFilter: "blur(4px)",
+      backdropFilter: "blur(8px)",
+      WebkitBackdropFilter: "blur(8px)",
+      borderRadius: 6,
       minWidth: 140,
     }}>
-      <div style={{ color: "#888", letterSpacing: 2, marginBottom: 4 }}>PIT CAPACITY</div>
+      <div style={{ color: "#eee", letterSpacing: 2, marginBottom: 4 }}>PIT CAPACITY</div>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         {/* Progress bar */}
         <div style={{
@@ -519,12 +521,12 @@ function QueueOverlay({ queue }: { queue: PitQueueInfo }) {
             QUEUE: {queue.queuedAgents.length}
           </div>
           {queue.queuedAgents.slice(0, 5).map((a, i) => (
-            <div key={i} style={{ color: "#777", fontSize: 9 }}>
+            <div key={i} style={{ color: "#eee", fontSize: 9 }}>
               #{a.position} {a.username}
             </div>
           ))}
           {queue.queuedAgents.length > 5 && (
-            <div style={{ color: "#555", fontSize: 9 }}>+{queue.queuedAgents.length - 5} more</div>
+            <div style={{ color: "#ccc", fontSize: 9 }}>+{queue.queuedAgents.length - 5} more</div>
           )}
         </div>
       )}

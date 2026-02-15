@@ -3,10 +3,12 @@ import type { Server } from "http";
 import { nanoid } from "nanoid";
 import bcrypt from "bcrypt";
 import { z } from "zod";
+import { verifyMessage } from "viem";
 import { prisma } from "../db/client.js";
 import { Pit, type PitAgent } from "../state/pit.js";
 import { Matchmaker } from "../state/matchmaker.js";
 import { FightManager } from "../state/fight-manager.js";
+import { BetManager } from "../state/bet-manager.js";
 import { ACTIONS } from "../combat/actions.js";
 import { isBlockedUsername } from "../middleware/validate.js";
 
@@ -18,6 +20,8 @@ const RegisterMsg = z.object({
   type: z.literal("register"),
   name: z.string().min(1).max(15).regex(USERNAME_REGEX, "Username must be 1-15 chars, alphanumeric + underscore"),
   character: z.enum(["ronin", "knight", "cyborg", "demon", "phantom"]).default("ronin"),
+  wallet_address: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
+  signature: z.string().min(1).optional(),
 });
 
 const AuthMsg = z.object({
@@ -67,6 +71,7 @@ export function setupWebSocket(server: Server) {
   const pit = new Pit();
   const matchmaker = new Matchmaker();
   const fightManager = new FightManager();
+  const betManager = new BetManager();
 
   // --- Helper: send JSON to a WebSocket ---
   function send(ws: WebSocket, msg: unknown): void {
@@ -169,6 +174,30 @@ export function setupWebSocket(server: Server) {
     sendExchangeRequests(fightId);
   };
 
+  fightManager.onRoundEnd = async (fightId, state) => {
+    const active = fightManager.activeFights.get(fightId);
+    if (!active) return;
+
+    // Filter history entries for this round
+    const roundExchanges = state.history.filter((h) => h.round === state.round);
+    const roundWinner = state.p1.hp <= 0 ? active.agent2Id : state.p2.hp <= 0 ? active.agent1Id : null;
+
+    try {
+      await prisma.fightRound.create({
+        data: {
+          fightId,
+          round: state.round,
+          exchanges: roundExchanges as any,
+          p1Hp: state.p1.hp,
+          p2Hp: state.p2.hp,
+          winnerId: roundWinner,
+        },
+      });
+    } catch (e) {
+      console.error("Failed to persist round:", e);
+    }
+  };
+
   fightManager.onFightEnd = async (fightId, winnerId, state) => {
     const active = fightManager.activeFights.get(fightId);
     if (!active) return;
@@ -188,6 +217,13 @@ export function setupWebSocket(server: Server) {
       });
     } catch (e) {
       console.error("Failed to persist fight result:", e);
+    }
+
+    // Resolve side bets
+    try {
+      await betManager.resolveBets(fightId, winnerId);
+    } catch (e) {
+      console.error("Failed to resolve bets:", e);
     }
 
     // Notify agents
@@ -251,6 +287,30 @@ export function setupWebSocket(server: Server) {
               send(ws, { type: "error", error: "Username taken" });
               return;
             }
+
+            // Determine owner wallet — verify signature if provided
+            let ownerWallet = "pending";
+            if (data.wallet_address && data.signature) {
+              try {
+                const message = `I own agent ${data.name} on Agent Battle Arena`;
+                const valid = await verifyMessage({
+                  address: data.wallet_address as `0x${string}`,
+                  message,
+                  signature: data.signature as `0x${string}`,
+                });
+                if (valid) {
+                  await prisma.user.upsert({
+                    where: { walletAddress: data.wallet_address },
+                    create: { walletAddress: data.wallet_address },
+                    update: {},
+                  });
+                  ownerWallet = data.wallet_address;
+                }
+              } catch {
+                // Signature verification failed — fall back to "pending"
+              }
+            }
+
             const apiKey = `sk_${nanoid(32)}`;
             const apiKeyHash = await bcrypt.hash(apiKey, 10);
             const agent = await prisma.agent.create({
@@ -258,7 +318,7 @@ export function setupWebSocket(server: Server) {
                 username: data.name,
                 characterId: data.character,
                 apiKeyHash,
-                ownerWallet: "pending",
+                ownerWallet,
               },
             });
             send(ws, {
@@ -266,6 +326,7 @@ export function setupWebSocket(server: Server) {
               api_key: apiKey,
               agent_id: agent.id,
               username: data.name,
+              wallet_linked: ownerWallet !== "pending",
             });
             break;
           }
@@ -401,5 +462,5 @@ export function setupWebSocket(server: Server) {
     });
   });
 
-  return { pit, matchmaker, fightManager, broadcastToFight, broadcastToAll };
+  return { pit, matchmaker, fightManager, betManager, broadcastToFight, broadcastToAll };
 }

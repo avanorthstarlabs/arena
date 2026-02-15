@@ -108,7 +108,9 @@ export default function CharactersPage() {
           position: "relative",
           zIndex: 5,
           display: "grid",
-          gridTemplateColumns: "260px 1fr 260px",
+          gridTemplateColumns: "220px 1fr 220px",
+          maxWidth: 1100,
+          margin: "0 auto",
           height: "calc(100vh - 20px)",
           gap: 0,
         }}
@@ -128,7 +130,7 @@ export default function CharactersPage() {
               style={{
                 fontSize: 10,
                 letterSpacing: 4,
-                color: "#999",
+                color: "#eee",
                 marginBottom: 8,
                 textTransform: "uppercase",
               }}
@@ -154,7 +156,7 @@ export default function CharactersPage() {
             <div
               style={{
                 fontSize: 11,
-                color: "#888",
+                color: "#eee",
                 letterSpacing: 2,
                 marginBottom: 24,
                 textTransform: "uppercase",
@@ -164,14 +166,14 @@ export default function CharactersPage() {
             </div>
 
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 9, letterSpacing: 3, color: "#888", marginBottom: 6, textTransform: "uppercase" }}>
+              <div style={{ fontSize: 9, letterSpacing: 3, color: "#eee", marginBottom: 6, textTransform: "uppercase" }}>
                 Difficulty
               </div>
               <div style={{ fontSize: 16, letterSpacing: 4 }}>{selected.difficulty}</div>
             </div>
 
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 9, letterSpacing: 3, color: "#888", marginBottom: 8, textTransform: "uppercase" }}>
+              <div style={{ fontSize: 9, letterSpacing: 3, color: "#eee", marginBottom: 8, textTransform: "uppercase" }}>
                 Traits
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
@@ -194,7 +196,7 @@ export default function CharactersPage() {
               </div>
             </div>
 
-            <p style={{ fontSize: 11, color: "#777", lineHeight: 1.7, margin: 0 }}>
+            <p style={{ fontSize: 11, color: "#eee", lineHeight: 1.7, margin: 0 }}>
               {selected.description}
             </p>
           </div>
@@ -209,16 +211,6 @@ export default function CharactersPage() {
             justifyContent: "center",
           }}
         >
-          <div
-            style={{
-              position: "relative",
-              width: "100%",
-              height: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
             {characters.map((char, i) => {
               let offset = i - selectedIndex;
               const half = Math.floor(characters.length / 2);
@@ -228,7 +220,7 @@ export default function CharactersPage() {
               const isSelected = offset === 0;
               const absOffset = Math.abs(offset);
 
-              const x = offset * 190;
+              const x = offset * 160;
               const scale = isSelected ? 1.1 : Math.max(0.5, 0.85 - absOffset * 0.15);
               const opacity = isSelected ? 1 : Math.max(0.2, 0.8 - absOffset * 0.25);
               const z = isSelected ? 10 : 5 - absOffset;
@@ -326,7 +318,7 @@ export default function CharactersPage() {
                       marginTop: 8,
                       fontSize: 11,
                       letterSpacing: 3,
-                      color: isSelected ? char.glow : "#999",
+                      color: isSelected ? char.glow : "#eee",
                       textTransform: "uppercase",
                       fontWeight: isSelected ? 700 : 400,
                       transition: "color 0.4s",
@@ -337,7 +329,6 @@ export default function CharactersPage() {
                 </div>
               );
             })}
-          </div>
 
           {/* Navigation arrows */}
           <button
@@ -348,8 +339,8 @@ export default function CharactersPage() {
               top: "50%",
               transform: "translateY(-50%)",
               background: "none",
-              border: "1px solid #555",
-              color: "#aaa",
+              border: "1px solid #eee",
+              color: "#fff",
               fontSize: 24,
               width: 44,
               height: 44,
@@ -365,8 +356,8 @@ export default function CharactersPage() {
               e.currentTarget.style.color = selected.glow;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "#777";
-              e.currentTarget.style.color = "#aaa";
+              e.currentTarget.style.borderColor = "#eee";
+              e.currentTarget.style.color = "#fff";
             }}
           >
             &#8249;
@@ -380,8 +371,8 @@ export default function CharactersPage() {
               top: "50%",
               transform: "translateY(-50%)",
               background: "none",
-              border: "1px solid #555",
-              color: "#aaa",
+              border: "1px solid #eee",
+              color: "#fff",
               fontSize: 24,
               width: 44,
               height: 44,
@@ -397,8 +388,8 @@ export default function CharactersPage() {
               e.currentTarget.style.color = selected.glow;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "#777";
-              e.currentTarget.style.color = "#aaa";
+              e.currentTarget.style.borderColor = "#eee";
+              e.currentTarget.style.color = "#fff";
             }}
           >
             &#8250;
@@ -411,7 +402,7 @@ export default function CharactersPage() {
               left: "50%",
               transform: "translateX(-50%)",
               fontSize: 10,
-              color: "#777",
+              color: "#eee",
               letterSpacing: 3,
               textTransform: "uppercase",
             }}
@@ -430,7 +421,7 @@ export default function CharactersPage() {
             borderLeft: "1px solid #1a1a2e",
           }}
         >
-          <div style={{ fontSize: 10, letterSpacing: 4, color: "#999", marginBottom: 16, textTransform: "uppercase" }}>
+          <div style={{ fontSize: 10, letterSpacing: 4, color: "#eee", marginBottom: 16, textTransform: "uppercase" }}>
             Roster
           </div>
 
@@ -438,7 +429,7 @@ export default function CharactersPage() {
             <span style={{ color: selected.glow, transition: "color 0.4s" }}>
               {String(selectedIndex + 1).padStart(2, "0")}
             </span>
-            <span style={{ color: "#777", fontSize: 24 }}>/{String(characters.length).padStart(2, "0")}</span>
+            <span style={{ color: "#eee", fontSize: 24 }}>/{String(characters.length).padStart(2, "0")}</span>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 24 }}>
@@ -466,7 +457,7 @@ export default function CharactersPage() {
                       width: 8,
                       height: 8,
                       borderRadius: "50%",
-                      backgroundColor: isActive ? char.glow : "#777",
+                      backgroundColor: isActive ? char.glow : "#eee",
                       transition: "background-color 0.3s",
                       flexShrink: 0,
                     }}
@@ -475,7 +466,7 @@ export default function CharactersPage() {
                     style={{
                       fontSize: 13,
                       fontWeight: isActive ? 700 : 400,
-                      color: isActive ? char.glow : "#aaa",
+                      color: isActive ? char.glow : "#eee",
                       letterSpacing: 2,
                       textTransform: "uppercase",
                       transition: "color 0.3s",
@@ -512,7 +503,7 @@ export default function CharactersPage() {
             Select Fighter
           </button>
 
-          <div style={{ marginTop: 12, fontSize: 10, color: "#888", letterSpacing: 1, textAlign: "center" }}>
+          <div style={{ marginTop: 12, fontSize: 10, color: "#eee", letterSpacing: 1, textAlign: "center" }}>
             All fighters have equal stats — cosmetic only
           </div>
         </div>
