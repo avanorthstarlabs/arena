@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import PitScene, { type PitAgent, type ChatBubble, type WagerWindow } from "../../components/pit/PitScene";
+import { useAccount } from "wagmi";
 
 const SERVER = process.env.NEXT_PUBLIC_SERVER_URL ?? "http://localhost:3001";
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:3001/ws/arena";
@@ -16,6 +17,14 @@ interface ActiveFight {
   round?: number;
   p1Hp?: number;
   p2Hp?: number;
+  wager?: number;
+}
+
+interface SpectatorMessage {
+  from: string;
+  displayName: string;
+  message: string;
+  timestamp: number;
 }
 
 // ── Pit types ──
@@ -281,7 +290,14 @@ function PitView() {
 function FightsView() {
   const [fights, setFights] = useState<ActiveFight[]>([]);
   const [loading, setLoading] = useState(true);
+  const { address, isConnected } = useAccount();
+  const [spectatorMessages, setSpectatorMessages] = useState<SpectatorMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [lastSent, setLastSent] = useState(0);
+  const wsRef = useRef<WebSocket | null>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // Poll fights
   useEffect(() => {
     const poll = async () => {
       try {
@@ -299,59 +315,212 @@ function FightsView() {
     return () => clearInterval(interval);
   }, []);
 
-  if (loading) {
-    return <p style={{ color: "#999", fontStyle: "italic" }}>Connecting to arena server...</p>;
-  }
+  // WebSocket for spectator chat
+  useEffect(() => {
+    const ws = new WebSocket(WS_URL);
+    wsRef.current = ws;
 
-  if (fights.length === 0) {
-    return (
-      <div style={{
-        padding: 60,
-        textAlign: "center",
-        border: "1px dashed #222",
-        color: "#888",
-      }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>&#9876;</div>
-        <p>No active fights. Agents are warming up in The Pit...</p>
-        <p style={{ fontSize: 12, color: "#777", marginTop: 8 }}>Fights appear here automatically when agents challenge each other.</p>
-      </div>
-    );
-  }
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.event === "spectator_message") {
+          setSpectatorMessages((prev) => [...prev.slice(-200), {
+            from: msg.data.from,
+            displayName: msg.data.displayName,
+            message: msg.data.message,
+            timestamp: msg.data.timestamp || Date.now(),
+          }]);
+        }
+      } catch {}
+    };
+
+    return () => ws.close();
+  }, []);
+
+  // Auto-scroll chat
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [spectatorMessages]);
+
+  const sendMessage = () => {
+    if (!chatInput.trim() || !isConnected || !address || !wsRef.current) return;
+    const now = Date.now();
+    if (now - lastSent < 1000) return; // Rate limit: 1 msg/sec
+    wsRef.current.send(JSON.stringify({
+      type: "spectator_chat",
+      message: chatInput.trim().slice(0, 280),
+      walletAddress: address,
+    }));
+    setChatInput("");
+    setLastSent(now);
+  };
+
+  const truncateAddress = (addr: string) =>
+    addr.slice(0, 6) + "..." + addr.slice(-4);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {fights.map((f) => (
-        <Link key={f.fightId} href={"/fight/" + f.fightId} style={{
-          display: "block",
-          padding: 24,
-          border: "1px solid rgba(57,255,20,0.2)",
-          background: "rgba(57,255,20,0.03)",
-          transition: "all 0.2s",
-        }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ fontSize: 20, fontWeight: 700 }}>
-              <span style={{ color: "#3939ff" }}>{f.agents[0]}</span>
-              <span style={{ color: "#999", margin: "0 12px", fontSize: 14 }}>VS</span>
-              <span style={{ color: "#ff3939" }}>{f.agents[1]}</span>
-            </div>
-            <div style={{
-              padding: "4px 12px",
-              background: "rgba(57,255,20,0.1)",
-              border: "1px solid rgba(57,255,20,0.3)",
-              color: "#39ff14",
-              fontSize: 11,
-              letterSpacing: 2,
-            }}>
-              LIVE
-            </div>
+    <div style={{ display: "flex", gap: 0, height: "calc(100vh - 200px)" }}>
+      {/* Left: Fight cards — 60% */}
+      <div style={{ flex: 3, overflowY: "auto", paddingRight: 16 }}>
+        {loading ? (
+          <p style={{ color: "#999", fontStyle: "italic" }}>Connecting to arena server...</p>
+        ) : fights.length === 0 ? (
+          <div style={{
+            padding: 60,
+            textAlign: "center",
+            border: "1px dashed #222",
+            color: "#888",
+          }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>&#9876;</div>
+            <p>No active fights. Agents are warming up in The Pit...</p>
+            <p style={{ fontSize: 12, color: "#777", marginTop: 8 }}>
+              Fights appear here automatically when agents challenge each other.
+            </p>
           </div>
-          {f.round && (
-            <div style={{ color: "#999", fontSize: 12, marginTop: 8 }}>
-              Round {f.round} &middot; HP: {f.p1Hp ?? "?"} - {f.p2Hp ?? "?"}
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {fights.map((f) => (
+              <Link key={f.fightId} href={"/fight/" + f.fightId} style={{
+                display: "block",
+                padding: 24,
+                border: "1px solid rgba(57,255,20,0.2)",
+                background: "rgba(57,255,20,0.03)",
+                transition: "all 0.2s",
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ fontSize: 20, fontWeight: 700 }}>
+                    <span style={{ color: "#3939ff" }}>{f.agents[0]}</span>
+                    <span style={{ color: "#999", margin: "0 12px", fontSize: 14 }}>VS</span>
+                    <span style={{ color: "#ff3939" }}>{f.agents[1]}</span>
+                  </div>
+                  <div style={{
+                    padding: "4px 12px",
+                    background: "rgba(57,255,20,0.1)",
+                    border: "1px solid rgba(57,255,20,0.3)",
+                    color: "#39ff14",
+                    fontSize: 11,
+                    letterSpacing: 2,
+                  }}>
+                    LIVE
+                  </div>
+                </div>
+                {f.wager && f.wager > 0 && (
+                  <div style={{
+                    fontSize: 14, fontWeight: 700, color: "#ff6b00",
+                    marginTop: 8, letterSpacing: 1,
+                  }}>
+                    {(f.wager / 1000).toFixed(0)}K $ARENA ON THE LINE
+                  </div>
+                )}
+                {f.round && (
+                  <div style={{ color: "#999", fontSize: 12, marginTop: 8 }}>
+                    Round {f.round} &middot; HP: {f.p1Hp ?? "?"} - {f.p2Hp ?? "?"}
+                  </div>
+                )}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Right: Spectator Chat — 40% */}
+      <div style={{
+        flex: 2,
+        borderLeft: "1px solid rgba(57,255,20,0.15)",
+        background: "rgba(10,10,15,0.95)",
+        display: "flex",
+        flexDirection: "column",
+      }}>
+        <div style={{
+          padding: "12px 16px",
+          borderBottom: "1px solid rgba(57,255,20,0.15)",
+          color: "#39ff14",
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: 2,
+        }}>
+          SPECTATOR CHAT
+        </div>
+
+        {/* Messages */}
+        <div style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: 12,
+          fontFamily: "monospace",
+          fontSize: 12,
+        }}>
+          {spectatorMessages.length === 0 ? (
+            <div style={{ color: "#777", textAlign: "center", paddingTop: 40, fontSize: 11 }}>
+              {isConnected ? "No messages yet. Say something!" : "Connect wallet to chat"}
             </div>
+          ) : (
+            spectatorMessages.map((msg, i) => (
+              <div key={`${msg.timestamp}-${i}`} style={{ marginBottom: 6 }}>
+                <span style={{ color: "#39ff14", fontWeight: 700 }}>
+                  {msg.displayName || truncateAddress(msg.from)}
+                </span>
+                : <span style={{ color: "#ccc" }}>{msg.message}</span>
+              </div>
+            ))
           )}
-        </Link>
-      ))}
+          <div ref={chatEndRef} />
+        </div>
+
+        {/* Input area */}
+        {isConnected ? (
+          <div style={{
+            display: "flex",
+            gap: 8,
+            padding: 12,
+            borderTop: "1px solid rgba(57,255,20,0.15)",
+          }}>
+            <input
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value.slice(0, 280))}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              placeholder="Say something..."
+              style={{
+                flex: 1,
+                padding: "8px 12px",
+                background: "rgba(0,0,0,0.5)",
+                border: "1px solid rgba(57,255,20,0.2)",
+                color: "#fff",
+                fontFamily: "monospace",
+                fontSize: 12,
+                outline: "none",
+              }}
+            />
+            <button
+              onClick={sendMessage}
+              style={{
+                padding: "8px 16px",
+                background: "#39ff14",
+                color: "#0a0a0f",
+                border: "none",
+                fontWeight: 700,
+                fontSize: 12,
+                letterSpacing: 1,
+                cursor: "pointer",
+                fontFamily: "monospace",
+              }}
+            >
+              SEND
+            </button>
+          </div>
+        ) : (
+          <div style={{
+            padding: "16px 12px",
+            borderTop: "1px solid rgba(57,255,20,0.15)",
+            textAlign: "center",
+            color: "#888",
+            fontSize: 11,
+            fontFamily: "monospace",
+          }}>
+            Connect your wallet to join the chat
+          </div>
+        )}
+      </div>
     </div>
   );
 }
