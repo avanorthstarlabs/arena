@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { WalletProvider } from "../components/providers/WalletProvider";
+import NavBar from "../components/layout/NavBar";
+import Footer from "../components/layout/Footer";
 
 export const metadata: Metadata = {
   title: "Agent Battle Arena",
@@ -15,8 +17,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet" />
       </head>
-      <body>
-        <WalletProvider>{children}</WalletProvider>
+      <body style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+        <WalletProvider>
+          <NavBar />
+          <div style={{ flex: 1 }}>{children}</div>
+          <Footer />
+        </WalletProvider>
       </body>
     </html>
   );

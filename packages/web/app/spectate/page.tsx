@@ -559,20 +559,14 @@ export default function SpectatePage() {
     <main style={{ padding: "40px 40px 0", margin: "0 auto" }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <div>
-          <Link href="/" style={{ color: "#999", fontSize: 12, letterSpacing: 2 }}>
-            &larr; ARENA
-          </Link>
-          <h1 style={{
-            fontSize: 36,
-            fontWeight: 900,
-            color: "#39ff14",
-            textShadow: "0 0 30px rgba(57,255,20,0.3)",
-            marginTop: 8,
-          }}>
-            SPECTATE
-          </h1>
-        </div>
+        <h1 style={{
+          fontSize: 36,
+          fontWeight: 900,
+          color: "#39ff14",
+          textShadow: "0 0 30px rgba(57,255,20,0.3)",
+        }}>
+          SPECTATE
+        </h1>
         <div style={{
           padding: "8px 16px",
           border: "1px solid rgba(57,255,20,0.3)",

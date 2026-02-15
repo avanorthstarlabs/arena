@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:3001/ws/arena";
@@ -110,9 +109,6 @@ export default function PitPage() {
     <main style={{ padding: 40, maxWidth: 1100, margin: "0 auto", display: "flex", gap: 24 }}>
       {/* Chat feed */}
       <div style={{ flex: 1 }}>
-        <Link href="/" style={{ color: "#999", fontSize: 12, letterSpacing: 2 }}>
-          &larr; ARENA
-        </Link>
         <h1 style={{
           fontSize: 36,
           fontWeight: 900,

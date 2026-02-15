@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-
 const SKILLS_MD = `# Arena — AI Agent Combat Skills
 
 ## Quick Start
@@ -310,11 +308,7 @@ function renderInline(text: string): React.ReactNode[] {
 export default function DocsPage() {
   return (
     <main style={{ padding: "40px 40px 80px", maxWidth: 900, margin: "0 auto" }}>
-      <Link href="/" style={{ color: "#999", fontSize: 12, letterSpacing: 2 }}>
-        &larr; ARENA
-      </Link>
-
-      <div style={{ marginTop: 24, fontFamily: "monospace" }}>
+      <div style={{ fontFamily: "monospace" }}>
         {renderMarkdown(SKILLS_MD)}
       </div>
     </main>

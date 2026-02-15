@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import Link from "next/link";
-
 // ── Character Data ────────────────────────────────────────────
 
 const characters = [
@@ -104,42 +102,6 @@ export default function CharactersPage() {
         }}
       />
 
-      {/* Top bar */}
-      <div
-        style={{
-          position: "relative",
-          zIndex: 10,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "20px 40px",
-        }}
-      >
-        <Link
-          href="/"
-          style={{
-            color: "#999",
-            fontSize: 11,
-            letterSpacing: 3,
-            textDecoration: "none",
-            textTransform: "uppercase",
-          }}
-        >
-          &larr; Arena
-        </Link>
-        <span
-          style={{
-            color: "#888",
-            fontSize: 13,
-            letterSpacing: 4,
-            textTransform: "uppercase",
-            fontWeight: 700,
-          }}
-        >
-          Select Character
-        </span>
-      </div>
-
       {/* Main layout: left panel | carousel | right panel */}
       <div
         style={{
@@ -147,7 +109,7 @@ export default function CharactersPage() {
           zIndex: 5,
           display: "grid",
           gridTemplateColumns: "260px 1fr 260px",
-          height: "calc(100vh - 70px)",
+          height: "calc(100vh - 20px)",
           gap: 0,
         }}
       >

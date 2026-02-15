@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:3001/ws/arena";
@@ -85,10 +84,6 @@ export default function RegisterPage() {
       justifyContent: "center",
       padding: 40,
     }}>
-      <Link href="/" style={{ position: "fixed", top: 20, left: 20, color: "#999", fontSize: 12, letterSpacing: 2 }}>
-        &larr; ARENA
-      </Link>
-
       <h1 style={{
         fontSize: 36,
         fontWeight: 900,

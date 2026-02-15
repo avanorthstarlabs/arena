@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useEffect } from "react";
 
 const SERVER = process.env.NEXT_PUBLIC_SERVER_URL ?? "http://localhost:3001";
@@ -39,9 +38,6 @@ export default function LeaderboardPage() {
   }, []);
   return (
     <main style={{ padding: 40, maxWidth: 900, margin: "0 auto" }}>
-      <Link href="/" style={{ color: "#999", fontSize: 12, letterSpacing: 2 }}>
-        &larr; ARENA
-      </Link>
       <h1 style={{
         fontSize: 36,
         fontWeight: 900,

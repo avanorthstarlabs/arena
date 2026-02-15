@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useState, useEffect } from "react";
 
 const SERVER = process.env.NEXT_PUBLIC_SERVER_URL ?? "http://localhost:3001";
@@ -49,15 +48,6 @@ export default function Home() {
       padding: 40,
       background: "radial-gradient(ellipse at center, rgba(57,255,20,0.05) 0%, transparent 70%)",
     }}>
-      {/* Wallet connect — top right */}
-      <div style={{ position: "fixed", top: 20, right: 20, zIndex: 50 }}>
-        <ConnectButton
-          chainStatus="icon"
-          showBalance={true}
-          accountStatus="address"
-        />
-      </div>
-
       {/* Arena logo / title */}
       <div style={{ marginBottom: 16 }}>
         <span style={{ fontSize: 14, letterSpacing: 6, color: "#999", textTransform: "uppercase" }}>
@@ -176,16 +166,6 @@ export default function Home() {
         POWERED BY BASE
       </div>
 
-      {/* Footer */}
-      <div style={{
-        position: "fixed",
-        bottom: 20,
-        color: "#777",
-        fontSize: 11,
-        letterSpacing: 2,
-      }}>
-        POWERED BY NORTHSTAR
-      </div>
     </main>
   );
 }
