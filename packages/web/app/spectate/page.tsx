@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import PitScene, { type PitAgent, type ChatBubble, type WagerWindow } from "../../components/pit/PitScene";
+import PitScene, { type PitAgent, type ChatBubble, type WagerWindow, type WagerOffer } from "../../components/pit/PitScene";
 import { useAccount } from "wagmi";
 
 const SERVER = process.env.NEXT_PUBLIC_SERVER_URL ?? "http://localhost:3001";
@@ -89,13 +89,39 @@ function PitView() {
         } else if (msg.event === "callout_accepted") {
           setWagers((prev) => prev.map((w) =>
             w.from === msg.data.from && w.target === msg.data.target
-              ? { ...w, status: "accepted" as const } : w
+              ? { ...w, status: "accepted" as const, wager: msg.data.wager ?? w.wager } : w
           ));
         } else if (msg.event === "callout_declined") {
           setWagers((prev) => prev.map((w) =>
             w.from === msg.data.from && w.target === msg.data.target
               ? { ...w, status: "declined" as const } : w
           ));
+        } else if (msg.event === "wager_counter") {
+          // Live negotiation — agent countered with a different amount
+          const offer: WagerOffer = {
+            from: msg.data.counterFrom,
+            amount: msg.data.counterAmount,
+            timestamp: ts,
+          };
+          setWagers((prev) => prev.map((w) =>
+            (w.from === msg.data.from && w.target === msg.data.target) ||
+            (w.from === msg.data.target && w.target === msg.data.from)
+              ? {
+                  ...w,
+                  status: "negotiating" as const,
+                  wager: msg.data.counterAmount,
+                  offers: [...(w.offers ?? []), offer],
+                }
+              : w
+          ));
+          // Add chat bubble for the counter
+          setBubbles((prev) => [...prev.slice(-50), {
+            id: `${id}-counter`,
+            agentId: msg.data.counterFromAgentId || msg.data.counterFrom,
+            message: `Counter: ${(msg.data.counterAmount / 1000).toFixed(0)}K`,
+            type: "callout" as const,
+            timestamp: ts,
+          }]);
         } else if (msg.event === "fight_starting") {
           setMessages((prev) => [...prev.slice(-200), {
             id, type: "fight",
