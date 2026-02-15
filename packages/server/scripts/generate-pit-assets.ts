@@ -23,35 +23,38 @@ const TASKS: GenerationTask[] = [
   {
     name: "Pit Background",
     filename: "pit-bg.png",
-    prompt: `Pixel art background for a retro 2D fighting game. 16-bit SNES era graphics.
-Scene: A grand underground colosseum pit where fighters gather. Gothic stone architecture.
-Massive vaulted ceiling with chains hanging down. Tall stone pillars on both sides with arched doorways.
-Bright neon green (#39ff14) glowing circuit-board patterns carved into the stone walls, like magical runes.
-Green-glowing crystal chandeliers or braziers providing the main light source.
-Dark navy blue and black color palette with vivid neon green as the only bright color.
-Every element is constructed from visible square pixels. Blocky shapes. No smooth gradients.
-The entire image looks like it belongs in a Super Nintendo or Game Boy Advance game.
-No characters or people. Wide landscape panoramic format. The background should feel like a classic pixel art fighting game stage like Street Fighter II or King of Fighters.`,
+    prompt: `16-bit pixel art of a futuristic underground lobby for a fighting game. SNES retro pixel art style.
+A spacious high-tech gathering hall where fighters hang out before matches. NOT scary or gothic — cool and techy.
+Wide open space with a high ceiling. Stone walls covered in bright neon green glowing circuit-board patterns and digital runes.
+A large neon green crystal chandelier hangs from the center ceiling, casting green light.
+Holographic screens and neon signs on the walls showing fight stats and leaderboards.
+The vibe is like a high-tech underground fight club lounge — cool, stylish, futuristic.
+Dark navy blue and slate gray stone walls. Bright neon green (#39ff14) is the main accent color for all glowing elements.
+Arched doorways leading to different areas. The space feels grand and inviting, not threatening.
+Style: 16-bit pixel art with visible square pixels, limited color palette, retro SNES game aesthetic.
+Wide landscape format. No characters. Similar aesthetic to pixel art cyberpunk or sci-fi game backgrounds.`,
   },
   {
     name: "Pit Floor Texture",
     filename: "pit-floor.png",
     prompt: `16-bit pixel art seamless tileable floor texture. Top-down view.
-Dark hexagonal stone tiles with neon green glowing edges and cracks between tiles.
-Some tiles slightly cracked or damaged. Occasional small green flame or ember between tiles.
-Dark gray, charcoal and navy blue tones with bright neon green (#39ff14) highlights in the cracks.
+Dark hexagonal tech-tiles with neon green (#39ff14) glowing edges between tiles.
+Clean geometric hexagons. Some tiles have small green circuit patterns etched in them.
+Dark gray and dark navy blue tones with bright neon green highlights in the gaps.
+Looks like high-tech arena flooring, not dirty dungeon stone.
 Style: 16-bit pixel art, visible individual pixels, clean geometric shapes, retro game aesthetic.
 Must be seamless and tileable. 512x512 pixels.`,
   },
   {
     name: "Pit Crowd",
     filename: "pit-crowd.png",
-    prompt: `16-bit pixel art crowd of tiny spectators in tiered seating for a dark fantasy fighting arena.
-Multiple rows of small pixel-art people sitting in stone bleachers. Each figure is only 8-12 pixels tall.
-Variety of colors for their clothes — some have glowing items. Dark background behind them.
-The crowd faces forward toward the viewer. Some figures have tiny glowing eyes or accessories.
-Style: 16-bit pixel art like SNES/GBA games. Visible individual pixels. Dark palette with colorful tiny characters.
-Wide panoramic banner format. Similar to retro fighting game audience sprites.`,
+    prompt: `16-bit pixel art crowd of tiny spectators watching fights. Retro SNES game style.
+Multiple rows of small pixel-art people sitting in tiered seating. Each figure is only 8-12 pixels tall.
+Variety of colorful outfits. Some spectators hold glowing green lightsticks or neon signs.
+Excited crowd energy — some have arms raised. Dark background behind them.
+The crowd faces forward. Lively and fun atmosphere, like a sporting event crowd.
+Style: 16-bit pixel art with visible individual pixels. Dark background with colorful tiny characters.
+Wide panoramic banner format. Similar to classic fighting game audience sprites.`,
   },
 ];
 

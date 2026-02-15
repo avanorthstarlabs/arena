@@ -356,16 +356,44 @@ function WagerTradeWindow({ wager, agents }: { wager: WagerWindow; agents: PitAg
   );
 }
 
+// ── Demo agents (shown when no real agents connected) ────────
+
+const DEMO_AGENTS: PitAgent[] = [
+  { agentId: "demo-ronin-1", username: "ronin", characterId: "ronin", elo: 1450, wins: 12, losses: 3 },
+  { agentId: "demo-knight-2", username: "knight", characterId: "knight", elo: 1380, wins: 9, losses: 5 },
+  { agentId: "demo-cyborg-3", username: "cyborg", characterId: "cyborg", elo: 1520, wins: 15, losses: 2 },
+  { agentId: "demo-demon-4", username: "demon", characterId: "demon", elo: 1290, wins: 7, losses: 8 },
+  { agentId: "demo-phantom-5", username: "phantom", characterId: "phantom", elo: 1410, wins: 11, losses: 4 },
+];
+
+const DEMO_BUBBLES: ChatBubble[] = [
+  { id: "demo-b1", agentId: "demo-ronin-1", message: "who's next?", type: "chat", timestamp: Date.now() },
+  { id: "demo-b2", agentId: "demo-demon-4", message: "50K says I win", type: "callout", timestamp: Date.now() },
+];
+
+const DEMO_WAGERS: WagerWindow[] = [
+  { id: "demo-w1", from: "demon", target: "cyborg", fromCharacter: "demon", targetCharacter: "cyborg", wager: 50000, status: "open", timestamp: Date.now() },
+];
+
 // ── Main PitScene Component ───────────────────────────────────
 
 export default function PitScene({ agents, bubbles, wagers, agentCount }: PitSceneProps) {
-  const hasActiveWager = wagers.some((w) => w.status === "open" || w.status === "accepted");
-  const mood = getMood(agentCount, hasActiveWager);
+  // Show demo agents when no real agents are connected
+  const showDemo = agents.length === 0;
+  const displayAgents = showDemo ? DEMO_AGENTS : agents;
+  const displayBubbles = showDemo ? DEMO_BUBBLES : bubbles;
+  const displayWagers = showDemo ? DEMO_WAGERS : wagers;
+  const displayCount = showDemo ? DEMO_AGENTS.length : agentCount;
+
+  const hasActiveWager = displayWagers.some((w) => w.status === "open" || w.status === "accepted");
+  const mood = getMood(displayCount, hasActiveWager);
   const moodStyle = MOOD_STYLES[mood];
 
-  // Only show recent bubbles (last 5 seconds)
+  // Only show recent bubbles (last 5 seconds) — demo bubbles always show
   const now = Date.now();
-  const activeBubbles = bubbles.filter((b) => now - b.timestamp < 5000);
+  const activeBubbles = showDemo
+    ? displayBubbles
+    : displayBubbles.filter((b) => now - b.timestamp < 5000);
   const bubbleMap = new Map<string, ChatBubble>();
   for (const b of activeBubbles) {
     bubbleMap.set(b.agentId, b); // latest bubble per agent
@@ -378,10 +406,8 @@ export default function PitScene({ agents, bubbles, wagers, agentCount }: PitSce
         style={{
           position: "absolute",
           top: 0,
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "100%",
-          maxWidth: 1920,
+          left: 0,
+          right: 0,
           height: "68%",
           backgroundImage: `url(${PIT_CONFIG.bgImage})`,
           backgroundSize: "cover",
@@ -392,6 +418,18 @@ export default function PitScene({ agents, bubbles, wagers, agentCount }: PitSce
           transition: "filter 1.5s ease",
         }}
       />
+      {/* Background side fades — blend edges into darkness */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: "68%",
+          background: "linear-gradient(to right, #080810 0%, transparent 6%, transparent 94%, #080810 100%)",
+          zIndex: 0,
+        }}
+      />
 
       {/* Vignette overlay — always present, matches ArenaScene */}
       <div
@@ -399,8 +437,8 @@ export default function PitScene({ agents, bubbles, wagers, agentCount }: PitSce
           position: "absolute",
           inset: 0,
           background: `
-            radial-gradient(ellipse at 50% 35%, transparent 30%, #080810cc 85%),
-            linear-gradient(to bottom, transparent 45%, #080810 72%)
+            radial-gradient(ellipse at 50% 40%, transparent 35%, #08081099 75%, #080810cc 90%),
+            linear-gradient(to bottom, transparent 50%, #08081066 65%, #08081099 78%, #080810 92%)
           `,
           zIndex: 1,
         }}
@@ -451,7 +489,7 @@ export default function PitScene({ agents, bubbles, wagers, agentCount }: PitSce
           style={{
             position: "absolute",
             inset: 0,
-            background: "linear-gradient(to right, #080810 0%, transparent 8%, transparent 92%, #080810 100%)",
+            background: "linear-gradient(to right, #080810 0%, transparent 10%, transparent 90%, #080810 100%)",
           }}
         />
       </div>
@@ -473,9 +511,9 @@ export default function PitScene({ agents, bubbles, wagers, agentCount }: PitSce
           style={{
             position: "absolute",
             bottom: 0,
-            left: "-20%",
-            right: "-20%",
-            height: "100%",
+            left: "-40%",
+            right: "-40%",
+            height: "120%",
             transform: "rotateX(60deg)",
             transformOrigin: "center bottom",
             backgroundImage: `url(${PIT_CONFIG.floorImage})`,
@@ -503,12 +541,12 @@ export default function PitScene({ agents, bubbles, wagers, agentCount }: PitSce
           }}
         />
 
-        {/* Side fades */}
+        {/* Side fades — gentle so floor extends edge-to-edge */}
         <div
           style={{
             position: "absolute",
             inset: 0,
-            background: "linear-gradient(to right, #080810 0%, transparent 15%, transparent 85%, #080810 100%)",
+            background: "linear-gradient(to right, #08081088 0%, transparent 5%, transparent 95%, #08081088 100%)",
             pointerEvents: "none",
           }}
         />
@@ -520,7 +558,7 @@ export default function PitScene({ agents, bubbles, wagers, agentCount }: PitSce
             bottom: 0,
             left: 0,
             right: 0,
-            height: "15%",
+            height: "8%",
             background: "linear-gradient(to top, #080810, transparent)",
             pointerEvents: "none",
           }}
@@ -544,21 +582,21 @@ export default function PitScene({ agents, bubbles, wagers, agentCount }: PitSce
       )}
 
       {/* Agent sprites */}
-      {agents.map((agent) => (
+      {displayAgents.map((agent) => (
         <PitAgentSprite
           key={agent.agentId}
           agent={agent}
           bubble={bubbleMap.get(agent.agentId)}
-          wagers={wagers}
-          allAgents={agents}
+          wagers={displayWagers}
+          allAgents={displayAgents}
         />
       ))}
 
       {/* Wager trade windows */}
-      {wagers
+      {displayWagers
         .filter((w) => w.status !== "declined")
         .map((w) => (
-          <WagerTradeWindow key={w.id} wager={w} agents={agents} />
+          <WagerTradeWindow key={w.id} wager={w} agents={displayAgents} />
         ))}
 
       {/* Keyframes */}
