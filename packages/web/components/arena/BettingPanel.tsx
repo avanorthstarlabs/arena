@@ -15,7 +15,7 @@ interface BetPool {
 export function BettingPanel({ state }: { state: FightState }) {
   const { address, isConnected } = useAccount();
   const [pool, setPool] = useState<BetPool>({ p1: 0, p2: 0 });
-  const [amount, setAmount] = useState("5");
+  const [amount, setAmount] = useState("50000");
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [placing, setPlacing] = useState(false);
   const [message, setMessage] = useState("");
@@ -100,7 +100,7 @@ export function BettingPanel({ state }: { state: FightState }) {
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
         <div style={{ textAlign: "center", flex: 1 }}>
           <div style={{ color: "#3939ff", fontSize: 11, marginBottom: 2 }}>{state.p1.agentId}</div>
-          <div style={{ color: "#fff", fontSize: 16, fontWeight: 700 }}>${pool.p1.toFixed(0)}</div>
+          <div style={{ color: "#fff", fontSize: 16, fontWeight: 700 }}>{pool.p1 >= 1000 ? `${(pool.p1/1000).toFixed(0)}K` : pool.p1.toFixed(0)}</div>
           <div style={{ color: "#555", fontSize: 10 }}>{p1Odds}x</div>
         </div>
         <div style={{
@@ -110,11 +110,11 @@ export function BettingPanel({ state }: { state: FightState }) {
           fontSize: 10,
           padding: "0 8px",
         }}>
-          POOL
+          $NORTH
         </div>
         <div style={{ textAlign: "center", flex: 1 }}>
           <div style={{ color: "#ff3939", fontSize: 11, marginBottom: 2 }}>{state.p2.agentId}</div>
-          <div style={{ color: "#fff", fontSize: 16, fontWeight: 700 }}>${pool.p2.toFixed(0)}</div>
+          <div style={{ color: "#fff", fontSize: 16, fontWeight: 700 }}>{pool.p2 >= 1000 ? `${(pool.p2/1000).toFixed(0)}K` : pool.p2.toFixed(0)}</div>
           <div style={{ color: "#555", fontSize: 10 }}>{p2Odds}x</div>
         </div>
       </div>
@@ -205,7 +205,7 @@ export function BettingPanel({ state }: { state: FightState }) {
               }}
               placeholder="Amount"
             />
-            {[5, 10, 25].map((v) => (
+            {[50000, 100000, 500000].map((v) => (
               <button
                 key={v}
                 onClick={() => setAmount(String(v))}
@@ -219,7 +219,7 @@ export function BettingPanel({ state }: { state: FightState }) {
                   cursor: "pointer",
                 }}
               >
-                ${v}
+                {v >= 1000 ? `${v / 1000}K` : v}
               </button>
             ))}
           </div>
@@ -242,7 +242,7 @@ export function BettingPanel({ state }: { state: FightState }) {
               opacity: placing ? 0.5 : 1,
             }}
           >
-            {placing ? "PLACING..." : selectedAgent ? `BET $${amount} ON ${selectedAgent.toUpperCase()}` : "SELECT A FIGHTER"}
+            {placing ? "PLACING..." : selectedAgent ? `BET ${Number(amount) >= 1000 ? `${Number(amount)/1000}K` : amount} $NORTH ON ${selectedAgent.toUpperCase()}` : "SELECT A FIGHTER"}
           </button>
 
           {/* Message */}

@@ -4,6 +4,9 @@ import { createServer } from "http";
 import { config } from "./config.js";
 import { setupWebSocket } from "./api/ws.js";
 import { createRouter } from "./api/routes.js";
+import { createChainRouter } from "./chain/routes.js";
+import { createSkillsRouter } from "./api/skills-md.js";
+import { startDepositWatcher } from "./chain/deposit-watcher.js";
 
 const app = express();
 const server = createServer(app);
@@ -14,11 +17,19 @@ app.use(express.json());
 const { pit, fightManager, broadcastToFight } = setupWebSocket(server);
 const router = createRouter({ pit, fightManager });
 app.use("/api/v1", router);
+app.use("/api/v1", createChainRouter());
+app.use("/api/v1", createSkillsRouter());
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
 server.listen(config.port, () => {
   console.log(`Arena server running on port ${config.port}`);
+
+  // Start deposit watcher if configured
+  if (config.northTokenAddress && config.masterDepositAddress) {
+    startDepositWatcher();
+    console.log("Deposit watcher started");
+  }
 });
 
 export { app };

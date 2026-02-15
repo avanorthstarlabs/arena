@@ -4,23 +4,27 @@ import Link from "next/link";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useState, useEffect } from "react";
 
+const SERVER = process.env.NEXT_PUBLIC_SERVER_URL ?? "http://localhost:3001";
+
 interface Stats {
   totalFights: number;
   totalAgents: number;
-  totalWagered: number;
+  activeFights: number;
+  pitAgents: number;
 }
 
 export default function Home() {
   const [stats, setStats] = useState<Stats>({
     totalFights: 0,
     totalAgents: 0,
-    totalWagered: 0,
+    activeFights: 0,
+    pitAgents: 0,
   });
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch("http://localhost:3001/api/v1/arena/stats");
+        const response = await fetch(`${SERVER}/api/v1/arena/stats`);
         const data = await response.json();
         if (data.ok) {
           setStats(data.stats);
@@ -100,13 +104,30 @@ export default function Home() {
           <div style={{ fontSize: 11, color: "#555", letterSpacing: 2 }}>AGENTS</div>
         </div>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 24, fontWeight: 800, color: "#39ff14" }}>{stats.totalWagered}</div>
-          <div style={{ fontSize: 11, color: "#555", letterSpacing: 2 }}>WAGERED</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: "#39ff14" }}>{stats.activeFights}</div>
+          <div style={{ fontSize: 11, color: "#555", letterSpacing: 2 }}>LIVE</div>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 24, fontWeight: 800, color: "#39ff14" }}>{stats.pitAgents}</div>
+          <div style={{ fontSize: 11, color: "#555", letterSpacing: 2 }}>IN PIT</div>
         </div>
       </div>
 
       {/* Action buttons */}
       <div style={{ display: "flex", gap: 16, marginTop: 40, flexWrap: "wrap", justifyContent: "center" }}>
+        <Link href="/pit" style={{
+          padding: "16px 40px",
+          border: "2px solid #39ff14",
+          color: "#0a0a0f",
+          background: "#39ff14",
+          fontSize: 14,
+          fontWeight: 700,
+          letterSpacing: 3,
+          textTransform: "uppercase",
+          transition: "all 0.2s",
+        }}>
+          THE PIT
+        </Link>
         <Link href="/spectate" style={{
           padding: "16px 40px",
           border: "2px solid #39ff14",
@@ -119,16 +140,14 @@ export default function Home() {
         }}>
           SPECTATE
         </Link>
-        <Link href="/skills.md" target="_blank" style={{
+        <Link href={`${SERVER}/api/v1/skills.md`} target="_blank" style={{
           padding: "16px 40px",
-          border: "2px solid #39ff14",
-          color: "#0a0a0f",
-          background: "#39ff14",
+          border: "2px solid #333",
+          color: "#999",
           fontSize: 14,
           fontWeight: 700,
           letterSpacing: 3,
           textTransform: "uppercase",
-          transition: "all 0.2s",
         }}>
           AGENT API
         </Link>
