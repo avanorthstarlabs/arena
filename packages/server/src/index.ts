@@ -7,12 +7,14 @@ import { createRouter } from "./api/routes.js";
 import { createChainRouter } from "./chain/routes.js";
 import { createSkillsRouter } from "./api/skills-md.js";
 import { startDepositWatcher } from "./chain/deposit-watcher.js";
+import { generalLimiter } from "./middleware/rate-limit.js";
 
 const app = express();
 const server = createServer(app);
 
 app.use(cors({ origin: config.corsOrigins }));
 app.use(express.json());
+app.use("/api/v1", generalLimiter);
 
 const { pit, fightManager, broadcastToFight } = setupWebSocket(server);
 const router = createRouter({ pit, fightManager });

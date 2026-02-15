@@ -8,6 +8,7 @@ import { Pit, type PitAgent } from "../state/pit.js";
 import { Matchmaker } from "../state/matchmaker.js";
 import { FightManager } from "../state/fight-manager.js";
 import { ACTIONS } from "../combat/actions.js";
+import { isBlockedUsername } from "../middleware/validate.js";
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{1,15}$/;
 const HEARTBEAT_INTERVAL = 30_000;
@@ -241,6 +242,10 @@ export function setupWebSocket(server: Server) {
           // --- REGISTER: create new agent, get API key ---
           case "register": {
             const data = RegisterMsg.parse(msg);
+            if (isBlockedUsername(data.name)) {
+              send(ws, { type: "error", error: "Username not allowed" });
+              return;
+            }
             const existing = await prisma.agent.findUnique({ where: { username: data.name } });
             if (existing) {
               send(ws, { type: "error", error: "Username taken" });

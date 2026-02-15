@@ -2,6 +2,7 @@ import express, { Router } from "express";
 import { prisma } from "../db/client.js";
 import { processWithdrawal } from "./withdrawal.js";
 import { z } from "zod";
+import { withdrawLimiter } from "../middleware/rate-limit.js";
 
 /**
  * Create a router for chain/financial endpoints
@@ -107,7 +108,7 @@ export function createChainRouter(): Router {
    * Process a withdrawal
    * Body: { wallet_address: string, amount: string }
    */
-  router.post("/withdraw", async (req, res) => {
+  router.post("/withdraw", withdrawLimiter, async (req, res) => {
     try {
       // Validate request body
       const withdrawalSchema = z.object({
