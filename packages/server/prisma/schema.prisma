@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,101 +7,116 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Agent {
-  id              String      @id
-  skillsMd        String
-  walletAddress   String?
-  characterId     String      @default("default")
-  balance         Decimal     @default(0) @db.Decimal(18, 2)
-  wins            Int         @default(0)
-  losses          Int         @default(0)
-  currentStreak   Int         @default(0)
-  totalEarnings   Decimal     @default(0) @db.Decimal(18, 2)
-  registeredAt    DateTime    @default(now())
+model User {
+  walletAddress   String        @id
+  balance         Decimal       @default(0) @db.Decimal(36, 18)
+  totalDeposited  Decimal       @default(0) @db.Decimal(36, 18)
+  totalWithdrawn  Decimal       @default(0) @db.Decimal(36, 18)
+  totalWagered    Decimal       @default(0) @db.Decimal(36, 18)
+  totalWon        Decimal       @default(0) @db.Decimal(36, 18)
+  createdAt       DateTime      @default(now())
 
-  challengesSent      Challenge[]  @relation("Challenger")
-  challengesReceived  Challenge[]  @relation("Target")
-  fightsAsP1          Fight[]      @relation("FightP1")
-  fightsAsP2          Fight[]      @relation("FightP2")
-  fightsWon           Fight[]      @relation("FightWinner")
-  sideBets            SideBet[]
+  agents          Agent[]
+  bets            Bet[]
+  transactions    Transaction[]
 }
 
-model Challenge {
-  id              String    @id @default(cuid())
-  challengerId    String
-  targetId        String
-  wagerAmount     Decimal   @db.Decimal(18, 2)
-  status          String    @default("pending")
-  createdAt       DateTime  @default(now())
-  expiresAt       DateTime?
+model Agent {
+  id              String      @id @default(cuid())
+  ownerWallet     String
+  username        String      @unique
+  characterId     String      @default("ronin")
+  skillsMd        String      @default("")
+  apiKeyHash      String
+  wins            Int         @default(0)
+  losses          Int         @default(0)
+  elo             Int         @default(1000)
+  createdAt       DateTime    @default(now())
 
-  challenger      Agent     @relation("Challenger", fields: [challengerId], references: [id])
-  target          Agent     @relation("Target", fields: [targetId], references: [id])
-  fight           Fight?
+  owner           User        @relation(fields: [ownerWallet], references: [walletAddress])
+  fightsAsP1      Fight[]     @relation("FightP1")
+  fightsAsP2      Fight[]     @relation("FightP2")
+  fightsWon       Fight[]     @relation("FightWinner")
+
+  @@index([username])
+  @@index([elo])
 }
 
 model Fight {
   id              String      @id @default(cuid())
-  challengeId     String?     @unique
-  p1Id            String
-  p2Id            String
+  agent1Id        String
+  agent2Id        String
   winnerId        String?
-  wagerAmount     Decimal     @db.Decimal(18, 2)
-  treasuryFee     Decimal     @default(0) @db.Decimal(18, 2)
-  winnerPayout    Decimal     @default(0) @db.Decimal(18, 2)
+  wagerAmount     Decimal     @default(0) @db.Decimal(36, 18)
+  rakeAmount      Decimal     @default(0) @db.Decimal(36, 18)
   status          String      @default("active")
   currentRound    Int         @default(1)
   p1RoundWins     Int         @default(0)
   p2RoundWins     Int         @default(0)
-  startedAt       DateTime    @default(now())
-  endedAt         DateTime?
+  createdAt       DateTime    @default(now())
+  completedAt     DateTime?
 
-  challenge       Challenge?  @relation(fields: [challengeId], references: [id])
-  p1              Agent       @relation("FightP1", fields: [p1Id], references: [id])
-  p2              Agent       @relation("FightP2", fields: [p2Id], references: [id])
+  agent1          Agent       @relation("FightP1", fields: [agent1Id], references: [id])
+  agent2          Agent       @relation("FightP2", fields: [agent2Id], references: [id])
   winner          Agent?      @relation("FightWinner", fields: [winnerId], references: [id])
-  exchanges       Exchange[]
-  sideBets        SideBet[]
+  rounds          FightRound[]
+  bets            Bet[]
+  treasury        TreasuryEntry[]
 }
 
-model Exchange {
+model FightRound {
   id              String    @id @default(cuid())
   fightId         String
   round           Int
-  exchangeNum     Int
-  p1Action        String
-  p2Action        String
-  p1Damage        Int       @default(0)
-  p2Damage        Int       @default(0)
-  p1HpAfter       Int
-  p2HpAfter       Int
-  narrative       String
+  exchanges       Json
+  p1Hp            Int
+  p2Hp            Int
+  winnerId        String?
   createdAt       DateTime  @default(now())
 
   fight           Fight     @relation(fields: [fightId], references: [id])
 
-  @@unique([fightId, round, exchangeNum])
+  @@unique([fightId, round])
 }
 
-model SideBet {
+model Bet {
   id              String    @id @default(cuid())
   fightId         String
-  bettorId        String
-  predictedWinner String
-  amount          Decimal   @db.Decimal(18, 2)
-  payout          Decimal?  @db.Decimal(18, 2)
+  walletAddress   String
+  backedAgentId   String
+  amount          Decimal   @db.Decimal(36, 18)
+  payout          Decimal?  @db.Decimal(36, 18)
   status          String    @default("active")
   createdAt       DateTime  @default(now())
 
   fight           Fight     @relation(fields: [fightId], references: [id])
-  bettor          Agent     @relation(fields: [bettorId], references: [id])
+  user            User      @relation(fields: [walletAddress], references: [walletAddress])
+
+  @@index([fightId])
+  @@index([walletAddress])
 }
 
-model TreasuryLedger {
+model Transaction {
+  id              String    @id @default(cuid())
+  walletAddress   String
+  type            String
+  amount          Decimal   @db.Decimal(36, 18)
+  referenceId     String?
+  txHash          String?
+  createdAt       DateTime  @default(now())
+
+  user            User      @relation(fields: [walletAddress], references: [walletAddress])
+
+  @@index([walletAddress])
+  @@index([type])
+}
+
+model TreasuryEntry {
   id              String    @id @default(cuid())
   fightId         String?
-  amount          Decimal   @db.Decimal(18, 2)
+  amount          Decimal   @db.Decimal(36, 18)
   type            String
   createdAt       DateTime  @default(now())
+
+  fight           Fight?    @relation(fields: [fightId], references: [id])
 }
