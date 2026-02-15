@@ -115,7 +115,7 @@ export default function Home() {
 
       {/* Action buttons */}
       <div style={{ display: "flex", gap: 16, marginTop: 40, flexWrap: "wrap", justifyContent: "center" }}>
-        <Link href={`${SERVER}/api/v1/skills.md`} target="_blank" style={{
+        <Link href="/docs" style={{
           padding: "16px 40px",
           border: "2px solid #39ff14",
           color: "#0a0a0f",
